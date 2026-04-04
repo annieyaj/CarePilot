@@ -81,6 +81,7 @@ export default function ChatPage() {
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [cloudConfigured, setCloudConfigured] = useState(false);
+  const [geminiConfigured, setGeminiConfigured] = useState(false);
   const [cloudSession, setCloudSession] = useState<CloudSessionView | null>(null);
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
@@ -97,6 +98,10 @@ export default function ChatPage() {
       .then((r) => r.json())
       .then((d: { configured?: boolean }) => setCloudConfigured(Boolean(d.configured)))
       .catch(() => setCloudConfigured(false));
+    void apiFetch("/api/journey/gemini-status")
+      .then((r) => r.json())
+      .then((d: { configured?: boolean }) => setGeminiConfigured(Boolean(d.configured)))
+      .catch(() => setGeminiConfigured(false));
   }, []);
 
   useEffect(
@@ -229,7 +234,9 @@ export default function ChatPage() {
         <header className="cp-chat__head">
           <h1 className="cp-chat__title">Food &amp; subhealth chat</h1>
           <p className="cp-chat__sub">
-            Mock Browser Use plan + optional Browser Use Cloud (API key on server)
+            {geminiConfigured
+              ? "Replies use Google Gemini on the server. Live actions: structured plan + optional Browser Use Cloud."
+              : "Mock nutrition planner (set GEMINI_API_KEY in backend/.env for Gemini). Optional Browser Use Cloud."}
           </p>
         </header>
         <div className="cp-chat__messages" ref={listRef} role="log" aria-live="polite">

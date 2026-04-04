@@ -85,6 +85,21 @@ const assistResponseSchema = {
   required: ['intent', 'assistantText', 'browserSession'],
 }
 
+/** Same JSON shape; intent labels are nutrition/subhealth topics. */
+const nutritionAssistResponseSchema = {
+  ...assistResponseSchema,
+  properties: {
+    ...assistResponseSchema.properties,
+    intent: {
+      type: Type.STRING,
+      description:
+        'Topic label: sleep, cognitive, digestive, musculoskeletal, immune, general, or meta — best match for the user message.',
+    },
+  },
+}
+
+const NUTRITION_SYSTEM_INSTRUCTION_BASE = `You are CarePilot's **nutrition and subhealth** assistant (food patterns, wellness habits, public nutrition resources). Not a doctor: no diagnosis or prescriptions. Prefer NIH, USDA, Harvard Nutrition Source, professional society pages. Use conversation history; short follow-ups ("?", "ok") continue the same topic—do not repeat the entire prior essay unless the user asks. If asked **which AI model** you are, say honestly: you are CarePilot using **Google Gemini** via the app's backend; the configured model id is given below. Output must follow the JSON schema; browserSession holds suggested research steps and https links only (no logins).`
+
 export function geminiConfigured() {
   return Boolean(process.env.GEMINI_API_KEY?.trim())
 }
@@ -185,6 +200,72 @@ export async function assistWithGemini(message, history) {
       temperature: 0.4,
       responseMimeType: 'application/json',
       responseSchema: assistResponseSchema,
+    },
+  })
+
+  const text = response.text
+  if (!text?.trim()) {
+    throw new Error('Empty response from Gemini')
+  }
+
+  let parsed
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error('Gemini returned non-JSON text')
+  }
+
+  return normalizeAssistPayload(parsed)
+}
+
+/**
+ * @param {object | null | undefined} profile - Session health profile (ratings, age, etc.)
+ */
+function nutritionProfileHint(profile) {
+  if (!profile || typeof profile !== 'object') return ''
+  const ratings = [
+    ['sleep', profile.sleepRating],
+    ['cognitive', profile.cognitiveRating],
+    ['digestive', profile.digestiveRating],
+    ['musculoskeletal', profile.musculoskeletalRating],
+    ['immune', profile.immuneRating],
+  ]
+    .filter(([, v]) => typeof v === 'number' && v >= 1 && v <= 5)
+    .map(([k, v]) => `${k}: ${v}/5`)
+  const bits = []
+  if (profile.age != null && Number.isFinite(profile.age)) bits.push(`age ${profile.age}`)
+  if (ratings.length) bits.push(`focus scores ${ratings.join(', ')}`)
+  if (!bits.length) return ''
+  return `\nUser context (optional): ${bits.join('; ')}.`
+}
+
+/**
+ * Nutrition / subhealth chat via Gemini (same response shape as care assist).
+ * @param {string} message
+ * @param {Array<{ role?: string, text?: string }>} [history]
+ * @param {object | null} [profile]
+ */
+export async function assistWithGeminiNutrition(message, history, profile) {
+  const apiKey = process.env.GEMINI_API_KEY?.trim()
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not set')
+  }
+
+  const modelId = defaultModel()
+  const systemInstruction =
+    `${NUTRITION_SYSTEM_INSTRUCTION_BASE}\n\nConfigured Gemini model id: ${modelId}.${nutritionProfileHint(profile)}`
+
+  const ai = new GoogleGenAI({ apiKey })
+  const contents = buildGeminiContents(message, history)
+
+  const response = await ai.models.generateContent({
+    model: modelId,
+    contents,
+    config: {
+      systemInstruction,
+      temperature: 0.45,
+      responseMimeType: 'application/json',
+      responseSchema: nutritionAssistResponseSchema,
     },
   })
 

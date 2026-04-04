@@ -14,7 +14,11 @@ import {
   createCloudSession,
   getCloudSession,
 } from "./browserUseCloud.js";
-import { geminiConfigured, assistWithGemini } from "./geminiAssist.js";
+import {
+  geminiConfigured,
+  assistWithGemini,
+  assistWithGeminiNutrition,
+} from "./geminiAssist.js";
 import { planFromPatientMessage } from "./planFromPatientMessage.js";
 import { nutritionAssist } from "./nutritionAssist.js";
 import { buildDailyMealPlan } from "./mealPlan.js";
@@ -214,6 +218,21 @@ app.post("/api/journey/assist", async (req, res) => {
       const plan = planFromPatientMessage(message);
       res.json(plan);
       return;
+    }
+    if (geminiConfigured()) {
+      try {
+        const plan = await assistWithGeminiNutrition(message, history, profile);
+        res.json(plan);
+        return;
+      } catch (e) {
+        console.error("Gemini nutrition assist failed:", e?.message ?? e);
+        res.status(503).json({
+          error: e?.message ?? "Gemini request failed",
+          detail:
+            "Fix the API key/model or try again; mock nutrition planner is not used when GEMINI_API_KEY is set.",
+        });
+        return;
+      }
     }
     const plan = nutritionAssist(message, profile);
     res.json(plan);
