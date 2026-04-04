@@ -1,17 +1,19 @@
-import { NavLink, Outlet } from 'react-router-dom'
-import { Logo } from './Logo'
+import { NavLink, Outlet } from "react-router-dom";
+import { useSession } from "../context/SessionContext";
+import { Logo } from "./Logo";
 
-type Tab = { to: string; label: string; end?: boolean }
+type Tab = { to: string; label: string; end?: boolean };
 
 const tabs: Tab[] = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/summary', label: 'Summary' },
-  { to: '/plan', label: 'Plan' },
-  { to: '/journey', label: 'LiveActions' },
-  { to: '/explanation', label: 'Explanation' },
-]
+  { to: "/", label: "Home", end: true },
+  { to: "/input", label: "Health input" },
+  { to: "/chat", label: "Chat" },
+  { to: "/plan", label: "Meal plan" },
+];
 
 export default function AppLayout() {
+  const { logout, me, sessionId } = useSession();
+
   return (
     <div className="cp-shell">
       <aside className="cp-sidebar" aria-label="Main navigation">
@@ -25,17 +27,49 @@ export default function AppLayout() {
               to={to}
               end={!!end}
               className={({ isActive }) =>
-                'cp-nav__link' + (isActive ? ' cp-nav__link--active' : '')
+                "cp-nav__link" + (isActive ? " cp-nav__link--active" : "")
               }
             >
               {label}
             </NavLink>
           ))}
         </nav>
+        <div className="cp-sidebar__foot">
+          {sessionId ? (
+            <>
+              {me ? (
+                <p className="cp-sidebar__user" title={me.email}>
+                  {me.username}
+                </p>
+              ) : null}
+              <NavLink
+                to="/profile"
+                className={({ isActive }) =>
+                  "cp-sidebar__profile" + (isActive ? " cp-sidebar__profile--active" : "")
+                }
+              >
+                Profile
+              </NavLink>
+              <button type="button" className="cp-sidebar__logout" onClick={logout}>
+                Log out
+              </button>
+            </>
+          ) : (
+            <NavLink
+              to="/login"
+              state={{ from: "/input" }}
+              className={({ isActive }) =>
+                "cp-sidebar__profile" + (isActive ? " cp-sidebar__profile--active" : "")
+              }
+            >
+              Sign in
+            </NavLink>
+          )}
+        </div>
       </aside>
       <div className="cp-main">
         <Outlet />
       </div>
     </div>
-  )
+  );
 }
