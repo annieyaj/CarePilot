@@ -12,7 +12,7 @@ const tabs: Tab[] = [
 ];
 
 export default function AppLayout() {
-  const { logout, me } = useSession();
+  const { logout, me, sessionId } = useSession();
 
   return (
     <div className="cp-shell">
@@ -35,22 +35,36 @@ export default function AppLayout() {
           ))}
         </nav>
         <div className="cp-sidebar__foot">
-          {me ? (
-            <p className="cp-sidebar__user" title={me.email}>
-              {me.username}
-            </p>
-          ) : null}
-          <NavLink
-            to="/profile"
-            className={({ isActive }) =>
-              "cp-sidebar__profile" + (isActive ? " cp-sidebar__profile--active" : "")
-            }
-          >
-            Profile
-          </NavLink>
-          <button type="button" className="cp-sidebar__logout" onClick={logout}>
-            Log out
-          </button>
+          {sessionId ? (
+            <>
+              {me ? (
+                <p className="cp-sidebar__user" title={me.email}>
+                  {me.username}
+                </p>
+              ) : null}
+              <NavLink
+                to="/profile"
+                className={({ isActive }) =>
+                  "cp-sidebar__profile" + (isActive ? " cp-sidebar__profile--active" : "")
+                }
+              >
+                Profile
+              </NavLink>
+              <button type="button" className="cp-sidebar__logout" onClick={logout}>
+                Log out
+              </button>
+            </>
+          ) : (
+            <NavLink
+              to="/login"
+              state={{ from: "/input" }}
+              className={({ isActive }) =>
+                "cp-sidebar__profile" + (isActive ? " cp-sidebar__profile--active" : "")
+              }
+            >
+              Sign in
+            </NavLink>
+          )}
         </div>
       </aside>
       <div className="cp-main">

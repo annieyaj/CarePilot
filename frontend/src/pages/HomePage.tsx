@@ -2,8 +2,17 @@ import { Link } from "react-router-dom";
 import { useSession } from "../context/SessionContext";
 
 export default function HomePage() {
-  const { me } = useSession();
+  const { me, sessionId, loading } = useSession();
   const done = me?.profile.completedOnboarding;
+
+  const startJourney =
+    sessionId && done
+      ? { to: "/chat" as const }
+      : sessionId && !done
+        ? { to: "/input" as const }
+        : { to: "/login" as const, state: { from: "/input" } as const };
+
+  const startBusy = Boolean(sessionId && loading);
 
   return (
     <div className="cp-cover">
@@ -33,9 +42,19 @@ export default function HomePage() {
           </p>
         )}
         <div className="cp-home__actions">
-          <Link to="/chat" className="cp-btn cp-btn--primary">
-            Start your journey
-          </Link>
+          {startBusy ? (
+            <button type="button" className="cp-btn cp-btn--primary" disabled>
+              Loading…
+            </button>
+          ) : (
+            <Link
+              to={startJourney.to}
+              state={"state" in startJourney ? startJourney.state : undefined}
+              className="cp-btn cp-btn--primary"
+            >
+              Start your journey
+            </Link>
+          )}
           <Link to="/input" className="cp-btn cp-btn--secondary">
             {done ? "Update health input" : "Enter health information"}
           </Link>
