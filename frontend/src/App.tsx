@@ -1,21 +1,29 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import AppLayout from './components/AppLayout'
-import CoverPage from './pages/CoverPage'
-import JourneyPage from './pages/JourneyPage'
-import PlaceholderPage from './pages/PlaceholderPage'
-import './carepilot.css'
+import { Navigate, Route, Routes } from "react-router-dom";
+import AppLayout from "./components/AppLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ChatPage from "./pages/ChatPage";
+import HomePage from "./pages/HomePage";
+import InputPage from "./pages/InputPage";
+import LoginPage from "./pages/LoginPage";
+import PlanPage from "./pages/PlanPage";
+import ProfilePage from "./pages/ProfilePage";
+import "./carepilot.css";
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<AppLayout />}>
-        <Route index element={<CoverPage />} />
-        <Route path="journey" element={<JourneyPage />} />
-        <Route path="summary" element={<PlaceholderPage title="Summary" />} />
-        <Route path="plan" element={<PlaceholderPage title="Plan" />} />
-        <Route path="explanation" element={<PlaceholderPage title="Explanation" />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="input" element={<InputPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="chat" element={<ChatPage />} />
+          <Route path="plan" element={<PlanPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  )
+  );
 }
