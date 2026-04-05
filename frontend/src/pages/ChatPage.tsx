@@ -65,7 +65,7 @@ function parseGroceryCloudOutput(output: unknown): { items: GroceryPriceItem[] }
     }
   }
   if (typeof output !== "string") return null;
-  let raw = output
+  const raw = output
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```\s*$/m, "")
@@ -156,7 +156,6 @@ export default function ChatPage() {
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [cloudConfigured, setCloudConfigured] = useState(false);
-  const [geminiConfigured, setGeminiConfigured] = useState(false);
   const [cloudSession, setCloudSession] = useState<CloudSessionView | null>(null);
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
@@ -173,10 +172,6 @@ export default function ChatPage() {
       .then((r) => r.json())
       .then((d: { configured?: boolean }) => setCloudConfigured(Boolean(d.configured)))
       .catch(() => setCloudConfigured(false));
-    void apiFetch("/api/journey/gemini-status")
-      .then((r) => r.json())
-      .then((d: { configured?: boolean }) => setGeminiConfigured(Boolean(d.configured)))
-      .catch(() => setGeminiConfigured(false));
   }, []);
 
   useEffect(

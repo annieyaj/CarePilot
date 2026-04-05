@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { BodyUnitToggleBar } from "../components/BodyUnitToggleBar";
+import { BodyUnitToggles } from "../components/BodyUnitToggles";
 import { useSession } from "../context/SessionContext";
 import {
   formatHeightDisplay,
   formatWeightDisplay,
-  loadBodyUnitMode,
-  saveBodyUnitMode,
-  type BodyUnitMode,
+  loadBodyUnitPreferences,
+  saveBodyUnitPreferences,
+  type BodyUnitPreferences,
+  type HeightDisplayUnit,
+  type WeightDisplayUnit,
 } from "../lib/bodyUnits";
 
 function field(label: string, value: string | number | null) {
@@ -38,7 +40,7 @@ function ratingField(label: string, r: number | null | undefined) {
 
 export default function ProfilePage() {
   const { me } = useSession();
-  const [unitMode, setUnitMode] = useState<BodyUnitMode>(() => loadBodyUnitMode());
+  const [units, setUnits] = useState<BodyUnitPreferences>(() => loadBodyUnitPreferences());
 
   if (!me) {
     return (
@@ -49,9 +51,19 @@ export default function ProfilePage() {
   }
   const p = me.profile;
 
-  function onUnitChange(mode: BodyUnitMode) {
-    saveBodyUnitMode(mode);
-    setUnitMode(mode);
+  function updateUnits(next: BodyUnitPreferences) {
+    saveBodyUnitPreferences(next);
+    setUnits(next);
+  }
+
+  function onHeightChange(height: HeightDisplayUnit) {
+    if (height === units.height) return;
+    updateUnits({ ...units, height });
+  }
+
+  function onWeightChange(weight: WeightDisplayUnit) {
+    if (weight === units.weight) return;
+    updateUnits({ ...units, weight });
   }
 
   return (
@@ -73,17 +85,18 @@ export default function ProfilePage() {
             <span className="cp-form__unit-label" id="profile-body-units-label">
               Units
             </span>
-            <BodyUnitToggleBar
-              mode={unitMode}
-              onChange={onUnitChange}
+            <BodyUnitToggles
+              units={units}
+              onHeightChange={onHeightChange}
+              onWeightChange={onWeightChange}
               labelledBy="profile-body-units-label"
             />
           </div>
         </div>
         <dl className="cp-dl">
           {field("Age", p.age)}
-          {field("Height", formatHeightDisplay(p.heightCm, unitMode))}
-          {field("Weight", formatWeightDisplay(p.weightKg, unitMode))}
+          {field("Height", formatHeightDisplay(p.heightCm, units.height))}
+          {field("Weight", formatWeightDisplay(p.weightKg, units.weight))}
           {field("BMI", p.bmi)}
         </dl>
       </section>

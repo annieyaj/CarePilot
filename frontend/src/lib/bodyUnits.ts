@@ -1,25 +1,76 @@
-export const BODY_UNITS_STORAGE_KEY = "carepilot-body-units";
+export const BODY_UNITS_STORAGE_KEY_V2 = "carepilot-body-units-v2";
 
-export type BodyUnitMode = "metric" | "imperial";
+/** Legacy: one switch for both dimensions */
+const LEGACY_BODY_UNITS_KEY = "carepilot-body-units";
+
+export type HeightDisplayUnit = "cm" | "ft_in";
+
+export type WeightDisplayUnit = "kg" | "lb";
+
+export type BodyUnitPreferences = {
+  height: HeightDisplayUnit;
+  weight: WeightDisplayUnit;
+};
 
 const KG_PER_LB = 0.45359237;
 
-export function loadBodyUnitMode(): BodyUnitMode {
+const DEFAULT_PREFS: BodyUnitPreferences = {
+  height: "cm",
+  weight: "kg",
+};
+
+export function loadBodyUnitPreferences(): BodyUnitPreferences {
   try {
-    const v = localStorage.getItem(BODY_UNITS_STORAGE_KEY);
-    if (v === "imperial" || v === "metric") return v;
+    const raw = localStorage.getItem(BODY_UNITS_STORAGE_KEY_V2);
+    if (raw) {
+      const o = JSON.parse(raw) as unknown;
+      if (o && typeof o === "object") {
+        const rec = o as Record<string, unknown>;
+        const h = rec.height;
+        const w = rec.weight;
+        return {
+          height: h === "ft_in" ? "ft_in" : "cm",
+          weight: w === "lb" ? "lb" : "kg",
+        };
+      }
+    }
   } catch {
     /* ignore */
   }
-  return "metric";
+  try {
+    const v = localStorage.getItem(LEGACY_BODY_UNITS_KEY);
+    if (v === "imperial") return { height: "ft_in", weight: "lb" };
+    if (v === "metric") return { height: "cm", weight: "kg" };
+  } catch {
+    /* ignore */
+  }
+  return { ...DEFAULT_PREFS };
 }
 
-export function saveBodyUnitMode(mode: BodyUnitMode) {
+export function saveBodyUnitPreferences(prefs: BodyUnitPreferences) {
   try {
-    localStorage.setItem(BODY_UNITS_STORAGE_KEY, mode);
+    localStorage.setItem(BODY_UNITS_STORAGE_KEY_V2, JSON.stringify(prefs));
   } catch {
     /* ignore */
   }
+}
+
+/** @deprecated use loadBodyUnitPreferences */
+export type BodyUnitMode = "metric" | "imperial";
+
+/** @deprecated use loadBodyUnitPreferences */
+export function loadBodyUnitMode(): BodyUnitMode {
+  const p = loadBodyUnitPreferences();
+  return p.height === "cm" && p.weight === "kg" ? "metric" : "imperial";
+}
+
+/** @deprecated use saveBodyUnitPreferences */
+export function saveBodyUnitMode(mode: BodyUnitMode) {
+  saveBodyUnitPreferences(
+    mode === "metric"
+      ? { height: "cm", weight: "kg" }
+      : { height: "ft_in", weight: "lb" },
+  );
 }
 
 /** Pounds → kilograms (full precision for BMI / API). */
@@ -50,15 +101,15 @@ export function ftInFromCm(cm: number): { ft: number; inch: number } {
   return { ft, inch };
 }
 
-export function formatHeightDisplay(cm: number | null, mode: BodyUnitMode): string {
+export function formatHeightDisplay(cm: number | null, height: HeightDisplayUnit): string {
   if (cm == null) return "—";
-  if (mode === "metric") return `${cm} cm`;
+  if (height === "cm") return `${cm} cm`;
   const { ft, inch } = ftInFromCm(cm);
   return `${ft} ft ${inch} in`;
 }
 
-export function formatWeightDisplay(kg: number | null, mode: BodyUnitMode): string {
+export function formatWeightDisplay(kg: number | null, weight: WeightDisplayUnit): string {
   if (kg == null) return "—";
-  if (mode === "metric") return `${kg} kg`;
+  if (weight === "kg") return `${kg} kg`;
   return `${lbFromKg(kg)} lb`;
 }

@@ -787,6 +787,29 @@
   color: #64748b;
 }
 
+.cp-body-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.5rem;
+  align-items: flex-end;
+}
+
+.cp-body-units__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+}
+
+.cp-body-units__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  min-width: 3rem;
+}
+
 .cp-unit-toggle {
   display: inline-flex;
   padding: 3px;
@@ -825,6 +848,11 @@
 .cp-unit-toggle__btn--active:hover {
   color: #0d9488;
   background: #fff;
+}
+
+.cp-unit-toggle__btn:focus-visible {
+  outline: 2px solid rgba(13, 148, 136, 0.45);
+  outline-offset: 2px;
 }
 
 .cp-card__title-row {

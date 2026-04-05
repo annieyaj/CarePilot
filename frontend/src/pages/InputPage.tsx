@@ -1,16 +1,18 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/session";
-import { BodyUnitToggleBar } from "../components/BodyUnitToggleBar";
+import { BodyUnitToggles } from "../components/BodyUnitToggles";
 import { useSession } from "../context/SessionContext";
 import {
   cmFromFtIn,
   ftInFromCm,
   kgFromLb,
   lbFromKg,
-  loadBodyUnitMode,
-  saveBodyUnitMode,
-  type BodyUnitMode,
+  loadBodyUnitPreferences,
+  saveBodyUnitPreferences,
+  type BodyUnitPreferences,
+  type HeightDisplayUnit,
+  type WeightDisplayUnit,
 } from "../lib/bodyUnits";
 
 const DEFAULT_RATING = 3;
@@ -50,10 +52,11 @@ export default function InputPage() {
   const navigate = useNavigate();
   const p = me?.profile;
 
+  const [units, setUnits] = useState<BodyUnitPreferences>(() => loadBodyUnitPreferences());
+
   const [age, setAge] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [weightInput, setWeightInput] = useState("");
-  const [unitMode, setUnitMode] = useState<BodyUnitMode>(() => loadBodyUnitMode());
   const [ft, setFt] = useState("5");
   const [inch, setInch] = useState("8");
   const [sleepRating, setSleepRating] = useState(DEFAULT_RATING);
@@ -73,10 +76,10 @@ export default function InputPage() {
       setFt(String(f));
       setInch(String(i));
     }
+    const prefs = loadBodyUnitPreferences();
     if (p.weightKg != null) {
-      const mode = loadBodyUnitMode();
       setWeightInput(
-        mode === "metric"
+        prefs.weight === "kg"
           ? String(p.weightKg)
           : String(lbFromKg(p.weightKg)),
       );
@@ -88,38 +91,45 @@ export default function InputPage() {
     setImmuneRating(p.immuneRating ?? DEFAULT_RATING);
   }, [p]);
 
-  function handleUnitModeChange(next: BodyUnitMode) {
-    if (next === unitMode) return;
-    if (next === "imperial") {
+  function onHeightUnitChange(next: HeightDisplayUnit) {
+    if (next === units.height) return;
+    if (next === "ft_in" && units.height === "cm") {
       const h = parseFloat(heightCm);
       if (Number.isFinite(h) && h > 0) {
         const { ft: f, inch: i } = ftInFromCm(h);
         setFt(String(f));
         setInch(String(i));
       }
-      const wkg = parseFloat(weightInput);
-      if (Number.isFinite(wkg) && wkg > 0) {
-        setWeightInput(String(lbFromKg(wkg)));
-      }
-    } else {
+    } else if (next === "cm" && units.height === "ft_in") {
       const f = parseFloat(ft);
       const i = parseFloat(inch);
       if (Number.isFinite(f) && Number.isFinite(i)) {
         const cm = cmFromFtIn(f, i);
         if (Number.isFinite(cm) && cm > 0) setHeightCm(String(cm));
       }
-      const wlb = parseFloat(weightInput);
-      if (Number.isFinite(wlb) && wlb > 0) {
-        const kg = kgFromLb(wlb);
-        setWeightInput(String(Math.round(kg * 10) / 10));
+    }
+    const u = { ...units, height: next };
+    saveBodyUnitPreferences(u);
+    setUnits(u);
+  }
+
+  function onWeightUnitChange(next: WeightDisplayUnit) {
+    if (next === units.weight) return;
+    const w = parseFloat(weightInput);
+    if (Number.isFinite(w) && w > 0) {
+      if (next === "lb" && units.weight === "kg") {
+        setWeightInput(String(lbFromKg(w)));
+      } else if (next === "kg" && units.weight === "lb") {
+        setWeightInput(String(Math.round(kgFromLb(w) * 10) / 10));
       }
     }
-    saveBodyUnitMode(next);
-    setUnitMode(next);
+    const u = { ...units, weight: next };
+    saveBodyUnitPreferences(u);
+    setUnits(u);
   }
 
   function getHeightCm(): number | null {
-    if (unitMode === "metric") {
+    if (units.height === "cm") {
       const h = parseFloat(heightCm);
       return Number.isFinite(h) && h > 0 ? h : null;
     }
@@ -133,7 +143,7 @@ export default function InputPage() {
   function getWeightKg(): number | null {
     const w = parseFloat(weightInput);
     if (!Number.isFinite(w) || w <= 0) return null;
-    const kg = unitMode === "metric" ? w : kgFromLb(w);
+    const kg = units.weight === "kg" ? w : kgFromLb(w);
     return Math.round(kg * 100) / 100;
   }
 
@@ -183,7 +193,8 @@ export default function InputPage() {
   }
 
   const bmiPreview = computedBmi();
-  const metric = unitMode === "metric";
+  const heightCmMode = units.height === "cm";
+  const weightKgMode = units.weight === "kg";
 
   return (
     <div className="cp-page">
@@ -201,9 +212,10 @@ export default function InputPage() {
             <span className="cp-form__unit-label" id="input-body-units-label">
               Units
             </span>
-            <BodyUnitToggleBar
-              mode={unitMode}
-              onChange={handleUnitModeChange}
+            <BodyUnitToggles
+              units={units}
+              onHeightChange={onHeightUnitChange}
+              onWeightChange={onWeightUnitChange}
               labelledBy="input-body-units-label"
             />
           </div>
@@ -221,19 +233,19 @@ export default function InputPage() {
               />
             </label>
             <label className="cp-form__label">
-              {metric ? "Weight (kg)" : "Weight (lb)"}
+              {weightKgMode ? "Weight (kg)" : "Weight (lb)"}
               <input
                 className="cp-form__input"
                 type="number"
                 step="0.1"
-                min={metric ? 1 : 2}
+                min={weightKgMode ? 1 : 2}
                 value={weightInput}
                 onChange={(e) => setWeightInput(e.target.value)}
-                placeholder={metric ? "e.g. 72" : "e.g. 160"}
+                placeholder={weightKgMode ? "e.g. 72" : "e.g. 160"}
               />
             </label>
           </div>
-          {metric ? (
+          {heightCmMode ? (
             <label className="cp-form__label">
               Height (cm)
               <input
