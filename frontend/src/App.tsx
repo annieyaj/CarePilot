@@ -5,6 +5,7 @@ import ChatPage from "./pages/ChatPage";
 import HomePage from "./pages/HomePage";
 import InputPage from "./pages/InputPage";
 import LoginPage from "./pages/LoginPage";
+import QuickCheckPage from "./pages/QuickCheckPage";
 import PlanPage from "./pages/PlanPage";
 import ProfilePage from "./pages/ProfilePage";
 import "./carepilot.css";
@@ -16,6 +17,7 @@ export default function App() {
       <Route path="/" element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route element={<ProtectedRoute />}>
+          <Route path="quick-check" element={<QuickCheckPage />} />
           <Route path="input" element={<InputPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="chat" element={<ChatPage />} />

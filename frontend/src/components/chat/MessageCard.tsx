@@ -27,7 +27,7 @@ function PlaceCard({ p }: { p: CarePlaceRow }) {
             href={p.mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-sky-800 underline-offset-2 hover:underline"
+            className="font-medium text-cp-dust-700 underline-offset-2 hover:underline"
           >
             Open in Maps
           </a>
@@ -72,7 +72,7 @@ export function MessageCard(props: MessageCardProps) {
   if (props.variant === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[min(100%,36rem)] rounded-2xl bg-gradient-to-br from-teal-600 to-teal-800 px-4 py-3 text-sm leading-relaxed text-white shadow-md shadow-teal-900/20">
+        <div className="max-w-[min(100%,36rem)] rounded-2xl bg-gradient-to-br from-cp-sage-600 to-cp-sage-800 px-4 py-3 text-sm leading-relaxed text-white shadow-md shadow-cp-sage-900/20">
           {props.message.text.split("\n").map((line, i) => (
             <span key={i}>
               {i > 0 ? <br /> : null}
@@ -97,19 +97,19 @@ export function MessageCard(props: MessageCardProps) {
         <article
           className={`w-full max-w-[min(100%,40rem)] rounded-xl border bg-white p-4 shadow-md sm:p-5 ${
             groceryRun
-              ? "border-teal-200/80 shadow-teal-900/5"
+              ? "border-cp-sage-200/80 shadow-cp-sage-900/5"
               : mapsRun
-                ? "border-sky-200/90 shadow-sky-900/5"
-                : "border-indigo-200/90"
+                ? "border-cp-sage-200/90 shadow-cp-sage-800/5"
+                : "border-cp-sage-200/90"
           }`}
         >
           <header className="mb-3 border-b border-slate-100 pb-2">
-            <h3 className="text-sm font-bold tracking-tight text-sky-800">✨ CarePilot</h3>
+            <h3 className="text-sm font-bold tracking-tight text-cp-dust-700">✨ CarePilot</h3>
           </header>
           {br.kind === "grocery" &&
           ((br.grocery && br.grocery.length > 0) || br.grocerySubstitutions) ? (
-            <div className="rounded-xl border border-teal-100/80 bg-gradient-to-br from-teal-50/40 to-white px-3 py-3 sm:px-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-teal-800">
+            <div className="rounded-xl border border-cp-sage-100/80 bg-gradient-to-br from-cp-sage-50/40 to-white px-3 py-3 sm:px-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-cp-sage-800">
                 Browser price check
               </p>
               <h4 className="mt-1 text-base font-semibold text-slate-900">{br.title}</h4>
@@ -118,8 +118,8 @@ export function MessageCard(props: MessageCardProps) {
               ) : null}
             </div>
           ) : br.kind === "maps" ? (
-            <div className="rounded-xl border border-sky-100/90 bg-gradient-to-br from-sky-50/50 to-white px-3 py-3 sm:px-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-sky-900">
+            <div className="rounded-xl border border-cp-sage-100/90 bg-gradient-to-br from-cp-sage-50/50 to-white px-3 py-3 sm:px-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-cp-sage-800">
                 {br.mapsContext === "care" ? "Care locations (Maps)" : "Nearby stores (Maps)"}
               </p>
               <h4 className="mt-1 text-base font-semibold text-slate-900">{br.title}</h4>
@@ -128,8 +128,8 @@ export function MessageCard(props: MessageCardProps) {
               ) : null}
             </div>
           ) : (
-            <div className="rounded-lg border border-indigo-100 bg-gradient-to-br from-indigo-50/90 to-white px-3 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-indigo-800">
+            <div className="rounded-lg border border-cp-sage-100 bg-gradient-to-br from-cp-sage-50/90 to-white px-3 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-cp-sage-800">
                 Browser task results
               </p>
               <h4 className="mt-1.5 text-base font-semibold text-slate-900">{br.title}</h4>
@@ -189,9 +189,9 @@ export function MessageCard(props: MessageCardProps) {
 
   return (
     <div className="flex justify-start">
-      <article className="w-full max-w-[min(100%,40rem)] rounded-xl border border-teal-800/15 bg-white/95 p-4 shadow-md shadow-teal-900/5 sm:p-5">
-        <header className="mb-3 border-b border-teal-900/10 pb-2">
-          <h3 className="text-sm font-bold tracking-tight text-teal-900">✨ CarePilot</h3>
+      <article className="w-full max-w-[min(100%,40rem)] rounded-xl border border-cp-sage-800/15 bg-white/95 p-4 shadow-md shadow-cp-sage-900/5 sm:p-5">
+        <header className="mb-3 border-b border-cp-sage-900/10 pb-2">
+          <h3 className="text-sm font-bold tracking-tight text-cp-sage-900">✨ CarePilot</h3>
         </header>
 
         {showStructured && intro ? (
@@ -210,7 +210,7 @@ export function MessageCard(props: MessageCardProps) {
 
         {hasFoods ? (
           <section className="mt-4">
-            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-teal-700">
+            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-cp-sage-700">
               Foods to try
             </h4>
             <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
@@ -223,17 +223,17 @@ export function MessageCard(props: MessageCardProps) {
 
         {hasResources ? (
           <section className="mt-4">
-            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-teal-800">
+            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-cp-sage-800">
               {resourceSectionTitle}
             </h4>
             <ul className="space-y-1.5 text-sm text-slate-700">
               {message.resourceLinks.map((link) => (
-                <li key={link.url} className="rounded-lg bg-teal-50/80 px-2.5 py-1.5">
+                <li key={link.url} className="rounded-lg bg-cp-sage-50/80 px-2.5 py-1.5">
                   <a
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-teal-900 underline-offset-2 hover:underline"
+                    className="font-medium text-cp-sage-900 underline-offset-2 hover:underline"
                   >
                     {link.label}
                   </a>
@@ -244,7 +244,7 @@ export function MessageCard(props: MessageCardProps) {
         ) : null}
 
         {showGroceryBtn ? (
-          <div className="mt-4 border-t border-teal-900/10 pt-4">
+          <div className="mt-4 border-t border-cp-sage-900/10 pt-4">
             <SmartButton
               variant="outline"
               onClick={onCheckGroceryPrices}

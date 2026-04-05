@@ -35,7 +35,7 @@ function ResultRow({
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <StoreBadge name={store} />
             <span
-              className={`tabular-nums font-semibold text-teal-900 ${density === "compact" ? "text-sm" : "text-base"}`}
+              className={`tabular-nums font-semibold text-cp-sage-900 ${density === "compact" ? "text-sm" : "text-base"}`}
             >
               {priceLabel}
             </span>
@@ -48,7 +48,7 @@ function ResultRow({
               href={productUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center rounded-lg border border-teal-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-teal-900 shadow-sm transition hover:border-teal-300 hover:bg-teal-50/80"
+              className="inline-flex items-center justify-center rounded-lg border border-cp-sage-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-cp-sage-900 shadow-sm transition hover:border-cp-sage-300 hover:bg-cp-sage-50/80"
             >
               View product
             </a>
@@ -136,7 +136,7 @@ export function GroceryPriceBlock({
 
   return (
     <div
-      className={`mt-3 overflow-hidden rounded-2xl border border-teal-200/50 bg-white shadow-sm ring-1 ring-teal-900/[0.04] ${density === "compact" ? "shadow-none ring-slate-200/60" : ""}`}
+      className={`mt-3 overflow-hidden rounded-2xl border border-cp-sage-200/50 bg-white shadow-sm ring-1 ring-cp-sage-900/[0.04] ${density === "compact" ? "shadow-none ring-slate-200/60" : ""}`}
     >
       <div className={outerPad}>
         <div className="space-y-4">
@@ -147,7 +147,7 @@ export function GroceryPriceBlock({
                   className="rounded-xl border border-slate-100 bg-gradient-to-b from-slate-50/80 to-white p-3 sm:p-4"
                 >
                   <h5
-                    className={`mb-3 border-l-[3px] border-teal-500 pl-3 font-semibold leading-snug text-slate-900 ${headingClass}`}
+                    className={`mb-3 border-l-[3px] border-cp-sage-500 pl-3 font-semibold leading-snug text-slate-900 ${headingClass}`}
                   >
                     {block.query}
                   </h5>

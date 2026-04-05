@@ -28,6 +28,7 @@ function emptyProfile() {
     musculoskeletalRating: null,
     immuneRating: null,
     completedOnboarding: false,
+    symptomTagIds: [],
   };
 }
 

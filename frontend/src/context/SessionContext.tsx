@@ -25,6 +25,8 @@ export type HealthProfile = {
   musculoskeletalRating: number | null;
   immuneRating: number | null;
   completedOnboarding: boolean;
+  /** Quick-check multi-select symptom chip ids */
+  symptomTagIds?: string[];
 };
 
 type Me = {

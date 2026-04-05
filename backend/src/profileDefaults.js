@@ -10,6 +10,7 @@
  * @property {number | null} musculoskeletalRating
  * @property {number | null} immuneRating
  * @property {boolean} completedOnboarding
+ * @property {string[]} [symptomTagIds] — optional quick-check symptom chip ids
  */
 
 /** @param {number | null} heightCm @param {number | null} weightKg */

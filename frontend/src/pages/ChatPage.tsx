@@ -604,7 +604,7 @@ export default function ChatPage() {
   ) : liveLoading ? (
     <p className="flex items-center gap-2 text-slate-600">
       <span
-        className="size-2 animate-pulse rounded-full bg-sky-500"
+        className="size-2 animate-pulse rounded-full bg-cp-dust-500"
         aria-hidden
       />
       Planning…
@@ -683,12 +683,12 @@ export default function ChatPage() {
       >
         {cloudActive && !cloudSession ? (
           <div
-            className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-950"
+            className="flex items-center gap-2 rounded-xl border border-cp-sage-200 bg-cp-sage-50 px-3 py-2.5 text-sm text-cp-sage-900"
             role="status"
             aria-live="polite"
           >
             <span
-              className="size-4 shrink-0 animate-spin rounded-full border-2 border-sky-300 border-t-sky-800"
+              className="size-4 shrink-0 animate-spin rounded-full border-2 border-cp-sage-300 border-t-cp-dust-700"
               aria-hidden
             />
             <span className="font-medium">Connecting to Browser Use…</span>
@@ -711,7 +711,7 @@ export default function ChatPage() {
                   href={a.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm font-medium text-sky-700 underline-offset-2 hover:underline"
+                  className="text-sm font-medium text-cp-dust-700 underline-offset-2 hover:underline"
                 >
                   {a.label}
                 </a>
@@ -740,9 +740,9 @@ export default function ChatPage() {
               </span>
               {` · ${cloudSession.stepCount} step${cloudSession.stepCount === 1 ? "" : "s"}`}
               {isCloudRunning(cloudSession) ? (
-                <span className="ml-1.5 inline-flex items-center gap-1 text-sky-700">
+                <span className="ml-1.5 inline-flex items-center gap-1 text-cp-dust-700">
                   <span
-                    className="size-1.5 animate-pulse rounded-full bg-sky-500"
+                    className="size-1.5 animate-pulse rounded-full bg-cp-dust-500"
                     aria-hidden
                   />
                   running
@@ -757,7 +757,7 @@ export default function ChatPage() {
             {cloudSession.liveUrl ? (
               <>
                 <a
-                  className="mt-2 inline-block text-sm font-semibold text-sky-700 underline-offset-2 hover:underline"
+                  className="mt-2 inline-block text-sm font-semibold text-cp-dust-700 underline-offset-2 hover:underline"
                   href={cloudSession.liveUrl}
                   target="_blank"
                   rel="noreferrer"

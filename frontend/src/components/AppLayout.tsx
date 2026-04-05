@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useSession } from "../context/SessionContext";
 import { Logo } from "./Logo";
 
@@ -6,6 +6,7 @@ type Tab = { to: string; label: string; end?: boolean };
 
 const tabs: Tab[] = [
   { to: "/", label: "Home", end: true },
+  { to: "/quick-check", label: "Quick check" },
   { to: "/input", label: "Health input" },
   { to: "/chat", label: "Chat" },
   { to: "/plan", label: "Meal plan" },
@@ -13,9 +14,12 @@ const tabs: Tab[] = [
 
 export default function AppLayout() {
   const { logout, me, sessionId } = useSession();
+  const { pathname } = useLocation();
+  const hideSidebar = pathname === "/" || pathname === "/quick-check";
 
   return (
-    <div className="cp-shell">
+    <div className={"cp-shell" + (hideSidebar ? " cp-shell--full" : "")}>
+      {!hideSidebar ? (
       <aside className="cp-sidebar" aria-label="Main navigation">
         <div className="cp-sidebar__brand">
           <Logo />
@@ -67,6 +71,7 @@ export default function AppLayout() {
           )}
         </div>
       </aside>
+      ) : null}
       <div className="cp-main">
         <Outlet />
       </div>

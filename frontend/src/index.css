@@ -1,15 +1,93 @@
 @import "tailwindcss";
 
+/* CarePilot — soft sage & warm neutrals (low stimulation, restful) */
 :root {
-  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #0f172a;
-  background-color: #f8fafc;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Surfaces */
+  --cp-canvas: #e5eae8;
+  --cp-surface: #f7f8f7;
+  --cp-surface-white: #ffffff;
+  --cp-bg-subtle: #f3f6f5;
+  --cp-bg-muted: #e9efed;
+  --cp-bg-hover: #eef3f1;
+
+  /* Borders */
+  --cp-border: #d0dbd8;
+  --cp-border-light: #dce5e2;
+  --cp-border-muted: #c5d0cc;
+
+  /* Text */
+  --cp-text: #2d3836;
+  --cp-text-strong: #1f2a28;
+  --cp-text-body: #3d4a47;
+  --cp-text-secondary: #4f5e5a;
+  --cp-text-muted: #6b7a76;
+  --cp-text-placeholder: #8a9a94;
+  --cp-text-sidebar: #3d4d4a;
+  --cp-text-sidebar-muted: #5a6a66;
+
+  /* Brand — muted sage */
+  --cp-accent: #4f736a;
+  --cp-accent-hover: #5d867c;
+  --cp-accent-deep: #3d5c55;
+  --cp-accent-blue: #5a7d8c;
+  --cp-accent-blue-mid: #4d7a8a;
+  --cp-accent-blue-deep: #4a6b78;
+
+  /* RGB tuples (for rgba shadows & tints) */
+  --cp-accent-rgb: 79, 115, 106;
+  --cp-ink-rgb: 38, 48, 46;
+  --cp-blue-rgb: 90, 125, 140;
+
+  /* Nav */
+  --cp-nav-hover-bg: #eef1f0;
+  --cp-nav-active-bg: #e4eee9;
+
+  /* Semantic */
+  --cp-warning-text: #8a7340;
+  --cp-warning-bg: #f4f1e8;
+  --cp-warning-border: #e5dcc8;
+  --cp-error: #a84840;
+
+  /* Landing mesh & soft orbs */
+  --cp-mesh-a: #e0e8e5;
+  --cp-mesh-b: #e4e8ee;
+  --cp-mesh-c: #e8e6ee;
+  --cp-mesh-d: #e2e8e6;
+  --cp-orb-1: rgba(95, 130, 118, 0.26);
+  --cp-orb-2: rgba(118, 158, 172, 0.22);
+  --cp-orb-3: rgba(150, 142, 175, 0.16);
+  --cp-mint-soft: #9dcec4;
+  --cp-tint-mint: #e8f2ef;
+  --cp-tint-blue: #e4eef2;
+  --cp-tint-sky: #dfeaf0;
+
+  /* Chat panel (gradients) */
+  --cp-chat-from: #c4d8d2;
+  --cp-chat-via: #e2ebe8;
+  --cp-chat-to: #eef3f1;
+  --cp-chat-inputbar: #d5e5df;
+
+  /* Layout */
+  --cp-radius: 12px;
+  --cp-radius-lg: 20px;
+  --cp-shadow: 0 1px 3px rgba(var(--cp-ink-rgb), 0.05), 0 12px 40px rgba(var(--cp-ink-rgb), 0.06);
+}
+
+@theme {
+  /* Tailwind utilities: bg-cp-sage-600, text-cp-dust-700, … */
+  --color-cp-sage-50: #eef4f1;
+  --color-cp-sage-100: #dce8e3;
+  --color-cp-sage-200: #c2d5ce;
+  --color-cp-sage-300: #9fb8ae;
+  --color-cp-sage-400: #7a9e94;
+  --color-cp-sage-500: #5d867c;
+  --color-cp-sage-600: #4f736a;
+  --color-cp-sage-700: #3f5f57;
+  --color-cp-sage-800: #344a44;
+  --color-cp-sage-900: #2a3d38;
+  --color-cp-dust-500: #6d8fa0;
+  --color-cp-dust-600: #5c7d8c;
+  --color-cp-dust-700: #4a6b78;
 }
 
 *,
@@ -26,6 +104,21 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--cp-text);
+  background-color: var(--cp-canvas);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
