@@ -93,7 +93,16 @@ docker build -f Dockerfile.backend -t carepilot-api .
 docker run --rm -p 3001:3001 -e PORT=3001 carepilot-api
 ```
 
-On **Railway**, set each service’s **Dockerfile path** to `Dockerfile.frontend` or `Dockerfile.backend`. Do **not** use one combined image for both unless you build a custom file — the backend pulls native deps (`canvas` via `browser-use`) that **Alpine** cannot compile without extra packages; `Dockerfile.backend` uses **Debian bookworm-slim** and installs Cairo/Pango build deps.
+On **Railway**, open **each service → Settings → Build** and set **Dockerfile path** explicitly:
+
+| Service | Dockerfile path |
+|---------|------------------|
+| **carepilot-frontend** | `Dockerfile.frontend` |
+| **carepilot-backend** | `Dockerfile.backend` |
+
+If Railway says **“Using Detected Dockerfile”** and the log shows a **multi-stage** build with `COPY --from=build` and plain `RUN npm ci --omit=dev` (no `--workspace=`), you are **not** using `Dockerfile.backend` — the build will fail on **Alpine** (Python / **canvas** / node-gyp). **Clear the custom Dockerfile** or point it to the table above, then redeploy.
+
+`Dockerfile.backend` uses **Debian bookworm-slim** and installs **Python**, **Cairo**, **Pango**, etc., so `canvas` can compile.
 
 Open http://localhost:3001 — UI + `/api` on one port.
 
