@@ -42,7 +42,7 @@ export function ChatWindow({
       aria-label="CarePilot chat"
     >
       <header className="shrink-0 border-b border-white/35 bg-[rgb(237_242_244/0.58)] px-4 py-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.6)] backdrop-blur-[22px] backdrop-saturate-[145%] sm:px-6">
-        <h1 className="m-0">
+        <h1 className="m-0 flex w-max max-w-full">
           <Logo variant="compact" />
         </h1>
       </header>
