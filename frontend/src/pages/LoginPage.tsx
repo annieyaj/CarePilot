@@ -31,7 +31,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="cp-auth">
+    <div className="cp-auth cp-auth--enter">
       <div className="cp-auth__card">
         <h1 className="cp-auth__title cp-auth__title--logo">
           <Logo variant="hero" />

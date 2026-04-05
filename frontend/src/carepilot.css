@@ -273,10 +273,11 @@
   justify-content: flex-end;
   padding: 2.5rem 3rem 3rem;
   background-color: #f0f7f9;
-  background-image: url("/images/home-hero.png");
+  background-image: url("/images/home-hero.jpg");
   background-repeat: no-repeat;
   background-size: cover;
   background-position: right center;
+  isolation: isolate;
 }
 
 .cp-cover__panel {
@@ -284,16 +285,15 @@
   z-index: 1;
   max-width: 520px;
   text-align: left;
+  transform: translateZ(0);
 }
 
 @keyframes cp-cover-item-in {
   from {
     opacity: 0;
-    transform: translateX(1.25rem);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
   }
 }
 
@@ -840,6 +840,27 @@
   justify-content: center;
   padding: 2rem 1rem;
   background: linear-gradient(160deg, #8fbcbc 0%, #89b7b7 42%, #3d6b6b 100%);
+}
+
+@keyframes cp-auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cp-auth--enter {
+  animation: cp-auth-enter 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-auth--enter {
+    animation: none;
+  }
 }
 
 .cp-auth--center {
