@@ -472,9 +472,17 @@ export default function ChatPage() {
   const journeyPhase = computeJourneyPhase(live, cloudActive, cloudSession);
 
   const browserUseRunning = cloudActive || cloudSession != null;
-  const browserUseReady =
-    !browserUseRunning && (!!live || actions.length > 0);
-  const browserPanelMinimal = !browserUseReady;
+  /** Keep the full recommendation panel (and CloudRunStatus) visible while Browser Use runs — not only before/after. */
+  const browserPanelMinimal =
+    !browserUseRunning &&
+    !liveLoading &&
+    !live &&
+    actions.length === 0;
+
+  const cloudBrowserConnecting = cloudActive && !cloudSession;
+  const cloudBrowserExecuting = Boolean(
+    cloudSession && isCloudRunning(cloudSession),
+  );
 
   const liveSummary = browserPanelMinimal ? undefined : live ? (
     <p className="flex flex-wrap items-center gap-2">
@@ -559,6 +567,8 @@ export default function ChatPage() {
         }
         cloudActive={cloudActive}
         journeyPhase={journeyPhase}
+        cloudBrowserConnecting={cloudBrowserConnecting}
+        cloudBrowserExecuting={cloudBrowserExecuting}
         ragSources={ragSources}
       />
       <RecommendationPanel

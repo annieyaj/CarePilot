@@ -102,7 +102,7 @@ export function RecommendationPanel({
         <div className="mt-3">
           <SmartButton
             variant="primary"
-            className="w-full py-2.5 text-sm sm:w-auto sm:min-w-[8.5rem]"
+            className={`w-full py-2.5 text-sm sm:w-auto sm:min-w-[8.5rem]${runLoading ? " cp-reco-run-btn--active" : ""}`}
             onClick={() => onRunSelected()}
             disabled={runDisabled}
             loading={runLoading}
@@ -111,6 +111,16 @@ export function RecommendationPanel({
             Run selected
           </SmartButton>
         </div>
+        {runLoading ? (
+          <p
+            className="cp-reco-run-hint mt-2 flex items-center gap-2 text-xs font-medium text-cp-sage-900"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="cp-reco-run-hint__dot" aria-hidden />
+            Browser Use is running — progress below when the cloud session starts.
+          </p>
+        ) : null}
         {liveSummary ? <div className="mt-3 text-xs text-slate-600">{liveSummary}</div> : null}
         {liveError ? (
           <p

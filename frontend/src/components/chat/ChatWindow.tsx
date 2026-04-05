@@ -22,6 +22,8 @@ type ChatWindowProps = {
   onCheckGroceryPrices?: () => void;
   cloudActive: boolean;
   journeyPhase: JourneyPhase;
+  cloudBrowserConnecting: boolean;
+  cloudBrowserExecuting: boolean;
   ragSources?: RagSource[] | null;
 };
 
@@ -38,6 +40,8 @@ export function ChatWindow({
   onCheckGroceryPrices,
   cloudActive,
   journeyPhase,
+  cloudBrowserConnecting,
+  cloudBrowserExecuting,
   ragSources,
 }: ChatWindowProps) {
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
@@ -59,6 +63,8 @@ export function ChatWindow({
       <JourneyFlowStrip
         phase={journeyPhase}
         liveLoading={liveLoading}
+        cloudBrowserConnecting={cloudBrowserConnecting}
+        cloudBrowserExecuting={cloudBrowserExecuting}
         ragSources={ragSources}
       />
 

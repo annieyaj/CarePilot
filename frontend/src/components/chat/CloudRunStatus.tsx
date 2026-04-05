@@ -36,15 +36,13 @@ export function CloudRunStatus({
     <>
       {connecting && !session ? (
         <div
-          className="cp-cloud-run cp-cloud-run--connecting rounded-xl border border-cp-sage-200 bg-cp-sage-50/90 px-3 py-3 text-sm text-cp-sage-900 shadow-sm"
+          className="cp-cloud-run cp-cloud-run--connecting cp-cloud-run--animated rounded-xl border border-cp-sage-200 bg-cp-sage-50/90 px-3 py-3 text-sm text-cp-sage-900 shadow-sm"
           role="status"
           aria-live="polite"
+          aria-busy="true"
         >
           <div className="flex items-start gap-3">
-            <span
-              className="mt-0.5 size-5 shrink-0 animate-spin rounded-full border-2 border-cp-sage-300 border-t-cp-dust-700"
-              aria-hidden
-            />
+            <span className="cp-cloud-run__spinner mt-0.5 shrink-0" aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-cp-sage-950">Starting cloud browser…</p>
               <p className="mt-0.5 text-xs text-cp-sage-800/90">
@@ -54,8 +52,8 @@ export function CloudRunStatus({
               <p className="mt-2 font-mono text-[11px] text-cp-sage-700/80">Elapsed {elapsed}s</p>
             </div>
           </div>
-          <div className="mt-3 h-1 overflow-hidden rounded-full bg-cp-sage-200/80" aria-hidden>
-            <div className="h-full w-full animate-pulse rounded-full bg-cp-sage-400/90" />
+          <div className="cp-cloud-run__bar-track mt-3" aria-hidden>
+            <div className="cp-cloud-run__bar-shimmer cp-cloud-run__bar-shimmer--sage" />
           </div>
         </div>
       ) : null}
@@ -70,7 +68,10 @@ export function CloudRunStatus({
       ) : null}
 
       {session ? (
-        <div className="cp-cloud-run cp-cloud-run--session rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div
+          className={`cp-cloud-run cp-cloud-run--session rounded-xl border border-slate-200 bg-white p-3 shadow-sm${sessionRunning ? " cp-cloud-run--animated" : ""}`}
+          aria-busy={sessionRunning ? true : undefined}
+        >
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600">
             <span className="font-semibold text-slate-800">Cloud run</span>
             <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">
@@ -93,8 +94,8 @@ export function CloudRunStatus({
           </div>
 
           {sessionRunning ? (
-            <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-200" aria-hidden>
-              <div className="h-full w-full animate-pulse rounded-full bg-cp-dust-500/80" />
+            <div className="cp-cloud-run__bar-track mt-2" aria-hidden>
+              <div className="cp-cloud-run__bar-shimmer cp-cloud-run__bar-shimmer--dust" />
             </div>
           ) : null}
 

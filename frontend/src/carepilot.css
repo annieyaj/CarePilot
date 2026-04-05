@@ -141,6 +141,34 @@
   }
 }
 
+.cp-reco-run-btn--active {
+  animation: cp-reco-run-btn-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes cp-reco-run-btn-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 14px rgba(20, 83, 45, 0.18),
+      0 0 0 0 rgba(34, 197, 94, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 6px 20px rgba(20, 83, 45, 0.22),
+      0 0 0 4px rgba(34, 197, 94, 0.2);
+  }
+}
+
+.cp-reco-run-hint__dot {
+  display: inline-block;
+  width: 0.35rem;
+  height: 0.35rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--cp-dust-600, #3d4f3a);
+  animation: cp-journey-pulse 1s ease-in-out infinite;
+}
+
 .cp-sidebar {
   width: 240px;
   flex-shrink: 0;
@@ -3929,6 +3957,181 @@
   50% {
     opacity: 1;
   }
+}
+
+.cp-journey-flow__step--working.cp-journey-flow__step--active {
+  animation: cp-journey-run-glow 1.85s ease-in-out infinite;
+}
+
+@keyframes cp-journey-run-glow {
+  0%,
+  100% {
+    border-color: rgba(20, 83, 45, 0.32);
+    box-shadow: 0 0 0 1px rgba(20, 83, 45, 0.1);
+  }
+  50% {
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow:
+      0 0 0 2px rgba(34, 197, 94, 0.16),
+      0 0 12px rgba(34, 197, 94, 0.12);
+  }
+}
+
+.cp-journey-flow__browser-run {
+  margin-top: 0.55rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(20, 83, 45, 0.22);
+  background: linear-gradient(
+    135deg,
+    rgba(240, 253, 244, 0.9) 0%,
+    rgba(236, 253, 245, 0.65) 100%
+  );
+}
+
+.cp-journey-flow__browser-run-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.cp-journey-flow__spinner {
+  margin-top: 0.12rem;
+  width: 0.88rem;
+  height: 0.88rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 2px solid rgba(134, 239, 172, 0.4);
+  border-top-color: var(--cp-dust-700, #3d4f3a);
+  animation: cp-browser-use-spin 0.68s linear infinite;
+}
+
+.cp-journey-flow__browser-run-text {
+  font-size: 0.72rem;
+  line-height: 1.38;
+  font-weight: 650;
+  color: var(--cp-sage-900, #14532d);
+}
+
+.cp-journey-flow__browser-run-bar {
+  margin-top: 0.48rem;
+  height: 3px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(20, 83, 45, 0.12);
+}
+
+.cp-journey-flow__browser-run-bar-inner {
+  height: 100%;
+  width: 38%;
+  border-radius: 999px;
+  margin-left: -40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(34, 197, 94, 0.35),
+    rgba(20, 83, 45, 0.85),
+    rgba(34, 197, 94, 0.35),
+    transparent
+  );
+  animation: cp-browser-use-bar 1.3s ease-in-out infinite;
+}
+
+@keyframes cp-browser-use-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cp-browser-use-bar {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+/* Cloud run panel (Browser Use): motion so users see work in progress */
+@keyframes cp-cloud-run-shimmer {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes cp-cloud-run-card-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 1px 3px rgba(15, 60, 40, 0.06),
+      0 0 0 0 rgba(34, 197, 94, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 2px 8px rgba(15, 60, 40, 0.08),
+      0 0 0 3px rgba(34, 197, 94, 0.12);
+  }
+}
+
+.cp-cloud-run--animated {
+  animation: cp-cloud-run-card-pulse 2.1s ease-in-out infinite;
+}
+
+.cp-cloud-run__spinner {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  border: 2px solid rgba(134, 239, 172, 0.45);
+  border-top-color: var(--cp-dust-700, #3d4f3a);
+  animation: cp-browser-use-spin 0.7s linear infinite;
+}
+
+.cp-cloud-run__bar-track {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.28);
+}
+
+.cp-cloud-run--connecting .cp-cloud-run__bar-track {
+  background: rgba(20, 83, 45, 0.14);
+}
+
+.cp-cloud-run__bar-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 42%;
+  border-radius: 999px;
+  animation: cp-cloud-run-shimmer 1.4s ease-in-out infinite;
+}
+
+.cp-cloud-run__bar-shimmer--sage {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(74, 222, 128, 0.5),
+    rgba(20, 83, 45, 0.88),
+    rgba(74, 222, 128, 0.5),
+    transparent
+  );
+}
+
+.cp-cloud-run__bar-shimmer--dust {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(61, 79, 58, 0.35),
+    rgba(61, 79, 58, 0.92),
+    rgba(61, 79, 58, 0.35),
+    transparent
+  );
 }
 
 .cp-journey-flow__rag {
