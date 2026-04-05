@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { Logo } from "../Logo";
 import { MessageCard } from "./MessageCard";
 import type { ChatMessage } from "./types";
 import { SmartButton } from "./SmartButton";
@@ -41,7 +42,9 @@ export function ChatWindow({
       aria-label="CarePilot chat"
     >
       <header className="shrink-0 border-b border-slate-100 px-4 py-4 sm:px-6">
-        <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">CarePilot</h1>
+        <h1 className="m-0">
+          <Logo variant="compact" />
+        </h1>
         <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
           Structured guidance · Run Browser Use only when you tap an action
         </p>

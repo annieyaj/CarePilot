@@ -23,20 +23,35 @@
 .cp-logo {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  min-width: 0;
 }
 
-.cp-logo__mark {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
+.cp-logo__img {
+  display: block;
+  height: 64px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
 }
 
-.cp-logo__word {
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #0f172a;
+.cp-logo--compact .cp-logo__img {
+  height: 48px;
+}
+
+@media (min-width: 640px) {
+  .cp-logo--compact .cp-logo__img {
+    height: 56px;
+  }
+}
+
+.cp-logo--hero {
+  justify-content: center;
+}
+
+.cp-logo--hero .cp-logo__img {
+  height: 64px;
+  object-position: center;
 }
 
 .cp-nav {
@@ -670,6 +685,11 @@
   font-size: 1.5rem;
   font-weight: 800;
   color: #0f172a;
+}
+
+.cp-auth__title--logo {
+  margin: 0 0 1rem;
+  line-height: 0;
 }
 
 .cp-auth__lede {

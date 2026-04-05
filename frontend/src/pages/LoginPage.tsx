@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { Logo } from "../components/Logo";
 import { useSession } from "../context/SessionContext";
 
 export default function LoginPage() {
@@ -32,7 +33,9 @@ export default function LoginPage() {
   return (
     <div className="cp-auth">
       <div className="cp-auth__card">
-        <h1 className="cp-auth__title">CarePilot</h1>
+        <h1 className="cp-auth__title cp-auth__title--logo">
+          <Logo variant="hero" />
+        </h1>
         <p className="cp-auth__lede">Sign in with your username and email to continue.</p>
         <form className="cp-form" onSubmit={(e) => void onSubmit(e)}>
           <label className="cp-form__label">
