@@ -18,6 +18,7 @@ export function createSession(username, email) {
 
 function emptyProfile() {
   return {
+    displayName: null,
     age: null,
     heightCm: null,
     weightKg: null,
@@ -29,6 +30,12 @@ function emptyProfile() {
     immuneRating: null,
     completedOnboarding: false,
     symptomTagIds: [],
+    /** Short wellness goals (user-entered). */
+    healthFocus: null,
+    /** Conditions / concerns in the user's words (user-entered). */
+    conditionsSummary: null,
+    /** Visits / labs — user summary only (not verified). */
+    visitLabSummary: null,
     chatMealPlanContext: null,
   };
 }

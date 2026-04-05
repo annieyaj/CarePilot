@@ -13,6 +13,7 @@ import {
   assistWithGeminiNutrition,
   geminiConfigured,
 } from "./geminiAssist.js";
+import { ragFeatureEnabled } from "./rag/rag.js";
 import { planFromPatientMessage } from "./planFromPatientMessage.js";
 import { nutritionAssist } from "./nutritionAssist.js";
 import { buildMealPlanForApi } from "./mealPlan.js";
@@ -54,6 +55,7 @@ app.get("/api/health", (_req, res) => {
     ok: true,
     service: "carepilot-backend",
     geminiConfigured: geminiConfigured(),
+    ragEnabled: ragFeatureEnabled(),
     browserUseConfigured: cloudConfigured(),
     placesConfigured: placesConfigured(),
   });
@@ -134,6 +136,15 @@ app.put("/api/me/profile", (req, res) => {
     return out;
   }
 
+  /** @param {unknown} v @param {number} max */
+  function parseOptionalTrimmedString(v, max) {
+    if (v === undefined) return undefined;
+    if (v === null) return null;
+    if (typeof v !== "string") return null;
+    const t = v.trim().slice(0, max);
+    return t.length ? t : null;
+  }
+
   const patch = {
     age,
     heightCm,
@@ -150,6 +161,18 @@ app.put("/api/me/profile", (req, res) => {
     patch.symptomTagIds = parseSymptomTagIds(b.symptomTagIds);
   } else {
     patch.symptomTagIds = s.profile.symptomTagIds ?? [];
+  }
+  if (b.displayName !== undefined) {
+    patch.displayName = parseOptionalTrimmedString(b.displayName, 80);
+  }
+  if (b.healthFocus !== undefined) {
+    patch.healthFocus = parseOptionalTrimmedString(b.healthFocus, 500);
+  }
+  if (b.conditionsSummary !== undefined) {
+    patch.conditionsSummary = parseOptionalTrimmedString(b.conditionsSummary, 500);
+  }
+  if (b.visitLabSummary !== undefined) {
+    patch.visitLabSummary = parseOptionalTrimmedString(b.visitLabSummary, 1200);
   }
   const profile = updateProfile(sessionId, patch);
   res.json({ profile });
@@ -338,11 +361,16 @@ app.post("/api/journey/assist", async (req, res) => {
       }));
   }
 
+  const userContextSession =
+    session != null
+      ? { username: session.username, profile }
+      : null;
+
   try {
     if (mode === "care") {
       if (geminiConfigured()) {
         try {
-          const plan = await assistWithGemini(message, history);
+          const plan = await assistWithGemini(message, history, userContextSession);
           res.json(plan);
           return;
         } catch (e) {
@@ -361,7 +389,11 @@ app.post("/api/journey/assist", async (req, res) => {
     }
     if (geminiConfigured()) {
       try {
-        const plan = await assistWithGeminiNutrition(message, history, profile);
+        const plan = await assistWithGeminiNutrition(
+          message,
+          history,
+          userContextSession,
+        );
         if (sid && plan.mealPlanUpdate?.apply) {
           const { apply: _a, ...rest } = plan.mealPlanUpdate;
           const prev = getSession(sid)?.profile?.chatMealPlanContext ?? null;

@@ -8,6 +8,7 @@ export function formatJourneyIntent(raw: string | null | undefined): string {
     digestive: "Digestive",
     musculoskeletal: "Musculoskeletal",
     immune: "Immune",
+    fitness: "Fitness & movement",
     general: "General",
     meta: "Meta",
     care_search: "Care search",

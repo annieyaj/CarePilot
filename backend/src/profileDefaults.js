@@ -18,6 +18,10 @@
  * @property {number | null} musculoskeletalRating
  * @property {number | null} immuneRating
  * @property {boolean} completedOnboarding
+ * @property {string | null} [displayName] — preferred first name or display name
+ * @property {string | null} [healthFocus] — wellness goals (user-entered)
+ * @property {string | null} [conditionsSummary] — conditions/concerns in user's words
+ * @property {string | null} [visitLabSummary] — short visit/lab notes (user-entered summary)
  * @property {string[]} [symptomTagIds] — optional quick-check symptom chip ids
  * @property {ChatMealPlanContext | null} [chatMealPlanContext] — last nutrition-chat meal struct (merged into meal plan API)
  */

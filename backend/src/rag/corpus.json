@@ -1,0 +1,110 @@
+[
+  {
+    "id": "emergency_red_flags",
+    "title": "When to call emergency services",
+    "tags": ["emergency", "911", "er", "chest pain", "stroke"],
+    "text": "Possible emergencies include chest pain or pressure, stroke signs (face droop, arm weakness, speech trouble), severe bleeding, trouble breathing, sudden confusion, loss of consciousness, or severe allergic reaction with throat swelling. Lead with: call emergency services (e.g. 911) or go to the ER now. Do not suggest waiting or self-driving if symptoms are severe or unclear."
+  },
+  {
+    "id": "urgent_care_vs_er",
+    "title": "Urgent care vs emergency department",
+    "tags": ["urgent care", "walk in", "clinic", "minor"],
+    "text": "Urgent care is often used for non-life-threatening issues that need same-day attention: minor cuts, sprains, mild fever, ear pain, simple infections. Emergency departments handle serious or life-threatening conditions, severe pain, breathing difficulty, and major trauma. When uncertain and symptoms are worrisome, prefer the ER or 911."
+  },
+  {
+    "id": "healthcare_gov",
+    "title": "Health insurance marketplace (US)",
+    "tags": ["insurance", "marketplace", "open enrollment", "ACA", "plan"],
+    "text": "HealthCare.gov is the federal marketplace for Affordable Care Act plans (states may use their own portal). Open enrollment dates vary; special enrollment periods apply after certain life events. Use official .gov links and state portals; verify subsidy and plan details on the official site."
+  },
+  {
+    "id": "medicaid_chip",
+    "title": "Medicaid and CHIP",
+    "tags": ["medicaid", "chip", "low income", "kids"],
+    "text": "Medicaid provides coverage for eligible low-income adults, children, pregnant people, elderly, and people with disabilities; rules vary by state. CHIP covers children in families that earn too much for Medicaid but may not afford private insurance. Direct users to their state Medicaid agency or Healthcare.gov for eligibility."
+  },
+  {
+    "id": "find_care_hrsa",
+    "title": "Community and sliding-scale clinics",
+    "tags": ["clinic", "uninsured", "cheap", "community health"],
+    "text": "HRSA health centers provide primary care on a sliding fee scale in many US communities. They are a credible option for people who need ongoing primary care and are navigating cost barriers. Prefer official HRSA finder tools over random directories."
+  },
+  {
+    "id": "pharmacy_locator",
+    "title": "Finding a pharmacy",
+    "tags": ["pharmacy", "prescription", "refill", "drugstore"],
+    "text": "Suggest locating pharmacies via official insurer tools, hospital discharge paperwork, or maps with verified hours. Compare generic options and insurance formularies on official plan portals. Do not tell users to share pharmacy passwords or log in on their behalf."
+  },
+  {
+    "id": "nih_trusted_nutrition",
+    "title": "Trusted nutrition science (US)",
+    "tags": ["nutrition", "diet", "food", "NIH", "research"],
+    "text": "Authoritative US nutrition references include NIH Office of Dietary Supplements for micronutrients, USDA MyPlate for food patterns, and MedlinePlus for patient-friendly summaries. Emphasize food patterns over miracle supplements; avoid diagnosing or prescribing doses."
+  },
+  {
+    "id": "sleep_recovery_patterns",
+    "title": "Sleep and recovery (general education)",
+    "tags": ["sleep", "insomnia", "rest", "recovery", "fatigue"],
+    "text": "General sleep hygiene: consistent schedule, limiting late caffeine and alcohol, dark cool bedroom, screen reduction before bed, and regular daytime movement. Persistent insomnia, loud snoring with daytime sleepiness, or leg sensations that disrupt sleep warrant a clinician—not a chat diagnosis."
+  },
+  {
+    "id": "digestive_gentle_patterns",
+    "title": "Digestive comfort (general patterns)",
+    "tags": ["digestive", "gut", "bloating", "IBS", "fiber"],
+    "text": "General education: gradual fiber increases with fluids, identifying personal trigger foods without extreme elimination, and seeking care for red flags such as blood in stool, unexplained weight loss, or persistent severe pain. Refer complex GI conditions to clinicians."
+  },
+  {
+    "id": "musculoskeletal_self_care",
+    "title": "Muscle and joint comfort (general)",
+    "tags": ["muscle", "joint", "neck", "back", "pain", "stretch"],
+    "text": "General education: gentle movement, gradual return to activity, ergonomics for desk work, and heat/ice as appropriate for minor strains. Red flags include numbness, weakness, fever with back pain, major trauma, or pain after cancer history—seek urgent in-person care."
+  },
+  {
+    "id": "immune_diet_patterns",
+    "title": "Immune-supporting food patterns (general)",
+    "tags": ["immune", "vitamin", "c", "zinc", "sick"],
+    "text": "Emphasize varied fruits and vegetables, adequate protein, hydration, and sleep—not megadose supplements. Avoid claims that specific foods cure infections. Vaccination and clinician guidance are outside a browser assistant's scope except to suggest official public health resources."
+  },
+  {
+    "id": "cognitive_focus_fuel",
+    "title": "Focus and cognitive wellness (general)",
+    "tags": ["focus", "brain", "cognitive", "energy", "concentration"],
+    "text": "Supportive patterns: regular meals with balanced macronutrients, hydration, sleep, caffeine moderation, and breaks for long screen sessions. Persistent cognitive decline or sudden confusion needs medical evaluation, not self-treatment from chat."
+  },
+  {
+    "id": "mental_health_crisis",
+    "title": "Mental health crisis resources (US)",
+    "tags": ["mental health", "suicide", "depression", "anxiety", "crisis"],
+    "text": "In the US, 988 connects to the Suicide & Crisis Lifeline (call or text). For immediate danger, use 911 or local emergency services. Encourage professional care; chat assistants do not provide therapy or crisis counseling."
+  },
+  {
+    "id": "price_shopping_groceries",
+    "title": "Grocery price checks (tool use)",
+    "tags": ["price", "walmart", "grocery", "budget", "shopping"],
+    "text": "When users want store prices, suggest Browser Use Cloud for public retail sites only—no logins. Prices vary by location and change often; frame results as approximate. Encourage comparing unit prices and store policies on official sites."
+  },
+  {
+    "id": "maps_care_search",
+    "title": "Maps-based care search",
+    "tags": ["near me", "hospital", "maps", "location", "care"],
+    "text": "Location-based facility search should use verified maps or insurer tools; hours and services change. Remind users to confirm with the facility and their insurance network. Emergency symptoms override 'nearest' convenience—use ER or 911 when appropriate."
+  },
+  {
+    "id": "privacy_health_data",
+    "title": "Privacy and accounts",
+    "tags": ["password", "login", "account", "phi"],
+    "text": "Never ask users for passwords, MFA codes, or to paste full medical records. Browser automation should not log into patient portals on the user's behalf. Prefer suggesting the user open trusted sites themselves when authentication is required."
+  },
+  {
+    "id": "care_navigation_tone",
+    "title": "CarePilot tone and limits",
+    "tags": ["disclaimer", "clinician", "advice"],
+    "text": "CarePilot supports healthcare navigation and general education, not diagnosis or treatment plans. Use calm, practical language; distinguish education from personalized medical advice; encourage clinicians for symptoms, pregnancy, medication changes, eating disorders, and complex conditions."
+  },
+  {
+    "id": "follow_up_messages",
+    "title": "Short follow-up messages",
+    "tags": ["ok", "yes", "what next", "more"],
+    "text": "Short user replies continue the same thread. Retrieve prior assistant context; do not reset to unrelated intake. Align browserSession steps and links with the ongoing topic."
+  }
+]
