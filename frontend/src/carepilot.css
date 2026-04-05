@@ -1111,15 +1111,6 @@
   color: #475569;
 }
 
-.cp-plan__priority {
-  margin: 0;
-  padding-left: 1.25rem;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: #334155;
-  text-transform: capitalize;
-}
-
 /* Meal plan: foods as pill labels */
 .cp-food-labels {
   list-style: none;
