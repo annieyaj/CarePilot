@@ -35,10 +35,11 @@ export function ActionItem({
         {showRun ? (
           <SmartButton
             variant="primary"
-            className="shrink-0 min-w-[4.5rem] py-1.5 text-xs"
+            className="shrink-0 min-w-[5.5rem] py-1.5 text-xs"
             onClick={onRun}
             disabled={runDisabled}
             loading={runLoading}
+            loadingLabel="Running"
           >
             {action.buttonLabel ?? "Run"}
           </SmartButton>

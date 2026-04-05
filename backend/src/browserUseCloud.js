@@ -51,8 +51,48 @@ function envFlashModeDefaultOn() {
   return true
 }
 
+/** v2 task terminal states (differs from v3 sessions, which use `idle` when done). */
+const V2_TASK_TERMINAL = new Set([
+  'finished',
+  'stopped',
+  'failed',
+  'error',
+  'completed',
+  'cancelled',
+  'canceled',
+  'timed_out',
+])
+
+/**
+ * @param {Record<string, unknown>} raw
+ */
+function pickTaskStatus(raw) {
+  const candidates = [
+    raw.status,
+    raw.state,
+    raw.task_status,
+    raw.taskStatus,
+    raw.lifecycle_status,
+    raw.lifecycleStatus,
+  ]
+  for (const c of candidates) {
+    if (c != null && String(c).trim() !== '') return String(c).trim()
+  }
+  return 'pending'
+}
+
+/**
+ * @param {string} status
+ */
+function v2TaskStillRunning(status) {
+  const s = (status || '').trim().toLowerCase()
+  if (!s) return true
+  return !V2_TASK_TERMINAL.has(s)
+}
+
 /**
  * Map Browser Use v2 task payload to the shape the CarePilot UI expects (same fields as v3 sessions).
+ * Adds `stillRunning` so the client does not mis-poll (v2/v3 status strings differ; v3 uses `idle` when done).
  * @param {Record<string, unknown>} raw
  */
 export function normalizeCloudTaskView(raw) {
@@ -72,18 +112,21 @@ export function normalizeCloudTaskView(raw) {
     raw.browserLiveUrl ??
     raw.browser_live_url ??
     null
+  const statusNorm = pickTaskStatus(raw)
+  const stepCount = Number(raw.stepCount ?? raw.step_count ?? steps.length)
   const out = {
     ...raw,
     id: String(raw.id ?? ''),
-    status: String(raw.status ?? ''),
+    status: statusNorm,
     liveUrl: typeof live === 'string' ? live : null,
     lastStepSummary:
       (typeof raw.lastStepSummary === 'string' && raw.lastStepSummary) ||
       (typeof raw.last_step_summary === 'string' && raw.last_step_summary) ||
       lastSummary,
-    stepCount: Number(raw.stepCount ?? raw.step_count ?? steps.length),
+    stepCount,
     output: raw.output ?? null,
     isTaskSuccessful: (raw.isTaskSuccessful ?? raw.is_task_successful) ?? null,
+    stillRunning: v2TaskStillRunning(statusNorm),
   }
   return out
 }

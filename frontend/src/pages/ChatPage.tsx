@@ -3,6 +3,11 @@ import { apiFetch } from "../api/session";
 import { ChatWindow } from "../components/chat/ChatWindow";
 import { CloudTaskOutput } from "../components/chat/CloudTaskOutput";
 import { cloudStatusStillRunning } from "../components/chat/cloudStatus";
+
+function isCloudRunning(view: CloudSessionView): boolean {
+  if (typeof view.stillRunning === "boolean") return view.stillRunning;
+  return cloudStatusStillRunning(view.status);
+}
 import type { BrowserSession, CloudSessionView } from "../components/chat/journeyTypes";
 import { buildRecommendationActions } from "../components/chat/recommendationActions";
 import { titleForResourceLinks } from "../components/chat/resourceLinks";
@@ -16,9 +21,16 @@ function cloudField<T>(o: Record<string, unknown>, camel: string, snake: string)
 }
 
 function parseCloudSession(raw: Record<string, unknown>): CloudSessionView {
+  const still =
+    typeof raw.stillRunning === "boolean"
+      ? raw.stillRunning
+      : typeof raw.still_running === "boolean"
+        ? raw.still_running
+        : undefined;
   return {
     id: String(cloudField(raw, "id", "id") ?? ""),
     status: String(cloudField(raw, "status", "status") ?? ""),
+    ...(still !== undefined ? { stillRunning: still } : {}),
     liveUrl: (cloudField<string | null>(raw, "liveUrl", "live_url") ?? null) || null,
     lastStepSummary:
       (cloudField<string | null>(raw, "lastStepSummary", "last_step_summary") ?? null) || null,
@@ -135,7 +147,7 @@ export default function ChatPage() {
       if (!sessionId) {
         throw new Error("Cloud did not return a session id");
       }
-      if (!cloudStatusStillRunning(current.status)) {
+      if (!isCloudRunning(current)) {
         setCloudActive(false);
         return;
       }
@@ -152,12 +164,12 @@ export default function ChatPage() {
         }
         current = parseCloudSession(d);
         setCloudSession({ ...current });
-        if (!cloudStatusStillRunning(current.status)) {
+        if (!isCloudRunning(current)) {
           stopCloudPoll();
           setCloudActive(false);
         }
       };
-      cloudPollRef.current = setInterval(() => void pollOnce(), 3000);
+      cloudPollRef.current = setInterval(() => void pollOnce(), 2000);
       void pollOnce();
     } catch (e) {
       setCloudError(e instanceof Error ? e.message : "Cloud task failed");
@@ -280,6 +292,19 @@ export default function ChatPage() {
         browserUseDisabled={!live || !cloudConfigured}
         liveSummary={liveSummary}
       >
+        {cloudActive && !cloudSession ? (
+          <div
+            className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-950"
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              className="size-4 shrink-0 animate-spin rounded-full border-2 border-sky-300 border-t-sky-800"
+              aria-hidden
+            />
+            <span className="font-medium">Connecting to Browser Use…</span>
+          </div>
+        ) : null}
         {liveError ? (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
             {liveError}
@@ -318,9 +343,16 @@ export default function ChatPage() {
         {cloudSession ? (
           <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
             <p className="text-xs text-slate-600">
-              Session <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{cloudSession.id.slice(0, 8)}…</code>{" "}
-              · {cloudSession.status}
-              {cloudSession.stepCount > 0 ? ` · ${cloudSession.stepCount} steps` : null}
+              Task <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{cloudSession.id.slice(0, 8)}…</code>
+              {" · "}
+              <span className="font-medium text-slate-800">{cloudSession.status}</span>
+              {` · ${cloudSession.stepCount} step${cloudSession.stepCount === 1 ? "" : "s"}`}
+              {isCloudRunning(cloudSession) ? (
+                <span className="ml-1.5 inline-flex items-center gap-1 text-sky-700">
+                  <span className="size-1.5 animate-pulse rounded-full bg-sky-500" aria-hidden />
+                  running
+                </span>
+              ) : null}
             </p>
             {cloudSession.lastStepSummary ? (
               <p className="mt-2 text-xs text-slate-600">{cloudSession.lastStepSummary}</p>

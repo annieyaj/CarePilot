@@ -117,6 +117,7 @@ export function MessageCard(props: MessageCardProps) {
               variant="outline"
               onClick={onCheckGroceryPrices}
               loading={groceryLoading}
+              loadingLabel="Checking…"
               className="w-full sm:w-auto"
             >
               Check grocery prices

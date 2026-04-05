@@ -102,6 +102,7 @@ export function ChatWindow({
             onClick={onSend}
             disabled={liveLoading}
             loading={liveLoading}
+            loadingLabel="Sending…"
           >
             Send
           </SmartButton>
