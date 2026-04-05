@@ -259,7 +259,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Cover */
@@ -838,7 +839,7 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  background: linear-gradient(160deg, #f0fdfa 0%, #f1f5f9 45%, #e0f2fe 100%);
+  background: linear-gradient(160deg, #8fbcbc 0%, #89b7b7 42%, #3d6b6b 100%);
 }
 
 .cp-auth--center {
@@ -848,11 +849,11 @@
 .cp-auth__card {
   width: 100%;
   max-width: 400px;
-  background: #fff;
+  background: #f0f9f8;
   border-radius: 16px;
   padding: 2rem 1.75rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+  border: 1px solid #a2bbb7;
+  box-shadow: 0 12px 40px rgba(30, 70, 68, 0.12);
 }
 
 .cp-auth__title {
@@ -1083,89 +1084,25 @@
   align-items: center;
 }
 
-/* Content pages: scroll the full main column so the bar sits at the viewport edge */
+/* Content pages — scroll on .cp-main so the gutter stays at the viewport edge, not beside a narrow column */
 .cp-page {
-  flex: 1;
-  min-height: 0;
+  flex: 0 1 auto;
   width: 100%;
-  min-width: 0;
-  overflow-y: auto;
+  max-width: none;
+  min-height: 0;
   overflow-x: hidden;
-}
-
-.cp-page__inner {
-  max-width: 720px;
+  overflow-y: visible;
   padding: 2rem 2.5rem 2.5rem;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* Health input: stretch fieldsets across the main column (extra width can stay empty) */
-.cp-page--input .cp-page__inner {
-  max-width: none;
-  width: 100%;
-}
-
-.cp-page--input .cp-form--wide {
-  max-width: none;
-}
-
-/* Meal plan: full-width like health input + staggered entrance (same keyframes as input) */
-.cp-page--plan .cp-page__inner {
-  max-width: none;
-  width: 100%;
-}
-
-.cp-page--plan .cp-page__inner > * {
-  opacity: 0;
-  animation: cp-input-page-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(2) {
-  animation-delay: 0.14s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(3) {
-  animation-delay: 0.28s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(4) {
-  animation-delay: 0.42s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(5) {
-  animation-delay: 0.56s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(6) {
-  animation-delay: 0.7s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(7) {
-  animation-delay: 0.84s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(8) {
-  animation-delay: 0.98s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(9) {
-  animation-delay: 1.12s;
-}
-
-.cp-page--plan .cp-page__inner > *:nth-child(10) {
-  animation-delay: 1.26s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cp-page--plan .cp-page__inner > * {
-    opacity: 1;
-    transform: none;
-    animation: none;
-  }
+.cp-page > * {
+  width: min(100%, 720px);
+  max-width: 720px;
+  box-sizing: border-box;
 }
 
 .cp-page__head {
