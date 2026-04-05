@@ -1,15 +1,10 @@
 import { Link } from "react-router-dom";
-import { useSession } from "../context/useSession";
+import { HeroBackdrop } from "../components/HeroBackdrop";
+import { useSession } from "../context/SessionContext";
 
 export default function HomePage() {
   const { me, sessionId, loading } = useSession();
   const done = me?.profile.completedOnboarding;
-
-  const checkTarget = sessionId
-    ? ({ to: "/quick-check" as const } as const)
-    : ({ to: "/login" as const, state: { from: "/quick-check" } as const } as const);
-
-  const checkBusy = Boolean(sessionId && loading);
 
   return (
     <div className="cp-cover cp-cover--landing">
@@ -30,19 +25,9 @@ export default function HomePage() {
         </p>
 
         <div className="cp-landing__cta">
-          {checkBusy ? (
-            <button type="button" className="cp-btn cp-btn--primary cp-landing__btn" disabled>
-              Loading…
-            </button>
-          ) : (
-            <Link
-              to={checkTarget.to}
-              state={"state" in checkTarget ? checkTarget.state : undefined}
-              className="cp-btn cp-btn--primary cp-landing__btn"
-            >
-              Start 2-min check
-            </Link>
-          )}
+          <Link to="/quick-check" className="cp-btn cp-btn--primary cp-landing__btn">
+            Start 2-min check
+          </Link>
         </div>
 
         {sessionId && !loading ? (

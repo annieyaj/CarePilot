@@ -54,7 +54,7 @@ function buildProfileBody(
 }
 
 export default function QuickCheckPage() {
-  const { me, refreshMe } = useSession();
+  const { me, refreshMe, sessionId } = useSession();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [phase, setPhase] = useState<"likert" | "symptoms" | "result">("likert");
@@ -97,6 +97,10 @@ export default function QuickCheckPage() {
       setSavedSymptomIds(symptomTagIds);
       setPhase("result");
       setSaveError(null);
+      if (!sessionId) {
+        setSaving(false);
+        return;
+      }
       setSaving(true);
       try {
         const body = buildProfileBody(risks, me?.profile ?? undefined, symptomTagIds);
@@ -114,7 +118,7 @@ export default function QuickCheckPage() {
         setSaving(false);
       }
     },
-    [me?.profile, refreshMe],
+    [me?.profile, refreshMe, sessionId],
   );
 
   function pickOption(risk: number) {
@@ -215,6 +219,15 @@ export default function QuickCheckPage() {
             {saveError ? (
               <p className="cp-form__error" role="alert">
                 {saveError}
+              </p>
+            ) : null}
+            {!sessionId ? (
+              <p className="cp-quick__meta">
+                You&apos;re not signed in — this snapshot isn&apos;t saved.{" "}
+                <Link to="/login" state={{ from: "/quick-check" }} className="cp-quick__link-secondary">
+                  Sign in
+                </Link>{" "}
+                to keep it on your profile.
               </p>
             ) : null}
           </header>

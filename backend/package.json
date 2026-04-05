@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "test": "node --test src/*.test.js",
-    "browser-use-smoke": "node scripts/browser-use-smoke.mjs"
+    "test": "node --test src/*.test.js"
   },
   "dependencies": {
     "@google/genai": "^1.48.0",

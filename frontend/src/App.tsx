@@ -16,8 +16,8 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<AppLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="quick-check" element={<QuickCheckPage />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="quick-check" element={<QuickCheckPage />} />
           <Route path="input" element={<InputPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="chat" element={<ChatPage />} />
