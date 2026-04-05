@@ -122,6 +122,19 @@ app.put("/api/me/profile", (req, res) => {
     return x;
   }
 
+  /** @param {unknown} v */
+  function parseSymptomTagIds(v) {
+    if (!Array.isArray(v)) return [];
+    const out = [];
+    for (const x of v) {
+      if (typeof x !== "string") continue;
+      const t = x.trim().slice(0, 64);
+      if (t.length) out.push(t);
+      if (out.length >= 48) break;
+    }
+    return out;
+  }
+
   const patch = {
     age,
     heightCm,
@@ -134,6 +147,11 @@ app.put("/api/me/profile", (req, res) => {
     immuneRating: parseRating(b.immuneRating),
     completedOnboarding: Boolean(b.completedOnboarding),
   };
+  if (b.symptomTagIds !== undefined) {
+    patch.symptomTagIds = parseSymptomTagIds(b.symptomTagIds);
+  } else {
+    patch.symptomTagIds = s.profile.symptomTagIds ?? [];
+  }
   const profile = updateProfile(sessionId, patch);
   res.json({ profile });
 });

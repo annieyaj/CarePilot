@@ -52,8 +52,8 @@ export function MapsLocationPanel({
   }
 
   return (
-    <div className="rounded-xl border border-sky-200/80 bg-gradient-to-b from-sky-50/40 to-white p-3 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-sky-900">Location & Maps</p>
+    <div className="rounded-xl border border-cp-sage-200/80 bg-gradient-to-b from-cp-sage-50/40 to-white p-3 shadow-sm">
+      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-cp-sage-800">Location & Maps</p>
       <p className="mt-1 text-xs leading-relaxed text-slate-600">
         We use Google Maps for nearby places. Browser Use still runs price checks on retailer sites—store
         names from Maps are passed to narrow those searches.
@@ -85,7 +85,7 @@ export function MapsLocationPanel({
           Search
         </SmartButton>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-sky-100 pt-3">
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-cp-sage-100 pt-3">
         <SmartButton variant="primary" className="text-xs" onClick={() => onFindGrocery()} disabled={loading}>
           Nearby grocery stores
         </SmartButton>
@@ -93,7 +93,7 @@ export function MapsLocationPanel({
           {groceryResultCount > 0 ? `${groceryResultCount} found` : ""}
         </span>
       </div>
-      <div className="mt-3 border-t border-sky-100 pt-3">
+      <div className="mt-3 border-t border-cp-sage-100 pt-3">
         <p className="text-[11px] font-semibold text-slate-700">Care facilities</p>
         <p className="mt-0.5 text-[11px] text-slate-500">
           For emergencies call <strong className="font-semibold">911</strong> (US). Maps show nearby
@@ -121,9 +121,9 @@ export function MapsLocationPanel({
         ) : null}
       </div>
       {loading ? (
-        <p className="mt-2 flex items-center gap-2 text-xs text-sky-800">
+        <p className="mt-2 flex items-center gap-2 text-xs text-cp-dust-700">
           <span
-            className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-sky-200 border-t-sky-800"
+            className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-cp-sage-200 border-t-cp-dust-700"
             aria-hidden
           />
           Contacting Maps…

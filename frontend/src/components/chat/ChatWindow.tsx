@@ -38,7 +38,7 @@ export function ChatWindow({
 
   return (
     <section
-      className={`flex min-h-0 min-w-0 flex-1 flex-col border-b border-teal-900/10 bg-gradient-to-br from-[#c8dedc]/90 via-[#e8f4f2] to-[#f0f9f8] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] lg:border-b-0 lg:border-r lg:border-r-teal-900/12 ${className}`}
+      className={`flex min-h-0 min-w-0 flex-1 flex-col border-b border-cp-sage-900/10 bg-gradient-to-br from-[var(--cp-chat-from)]/90 via-[var(--cp-chat-via)] to-[var(--cp-chat-to)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] lg:border-b-0 lg:border-r lg:border-r-cp-sage-900/12 ${className}`}
       aria-label="CarePilot chat"
     >
       <header className="shrink-0 border-b border-white/35 bg-[rgb(237_242_244/0.58)] px-4 py-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.6)] backdrop-blur-[22px] backdrop-saturate-[145%] sm:px-6">
@@ -72,7 +72,7 @@ export function ChatWindow({
         })}
       </div>
 
-      <div className="shrink-0 border-t border-teal-900/12 bg-[#dcecea]/80 px-4 py-3 backdrop-blur-md sm:px-6">
+      <div className="shrink-0 border-t border-cp-sage-900/12 bg-[var(--cp-chat-inputbar)]/80 px-4 py-3 backdrop-blur-md sm:px-6">
         <label className="visually-hidden" htmlFor="cp-guardian-input">
           Message
         </label>
@@ -90,7 +90,7 @@ export function ChatWindow({
                 onSend();
               }
             }}
-            className="min-h-[44px] w-full resize-none rounded-xl border border-teal-900/15 bg-white/90 px-3 py-2.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+            className="min-h-[44px] w-full resize-none rounded-xl border border-cp-sage-900/15 bg-white/90 px-3 py-2.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-cp-sage-600 focus:outline-none focus:ring-2 focus:ring-cp-sage-500/30"
           />
           <SmartButton
             type="button"

@@ -175,7 +175,7 @@ export function AgentTextProse({
         }
         if (b.type === "ul") {
           return (
-            <ul key={`ul-${idx}`} className="ml-1 space-y-2.5 border-l-2 border-teal-200/80 pl-3">
+            <ul key={`ul-${idx}`} className="ml-1 space-y-2.5 border-l-2 border-cp-sage-200/80 pl-3">
               {b.items.map((item, j) => (
                 <li key={j} className="leading-relaxed">
                   {inlineBold(item)}
@@ -188,7 +188,7 @@ export function AgentTextProse({
           return (
             <ol
               key={`ol-${idx}`}
-              className="ml-4 list-decimal space-y-2 marker:font-semibold marker:text-teal-700"
+              className="ml-4 list-decimal space-y-2 marker:font-semibold marker:text-cp-sage-700"
             >
               {b.items.map((item, j) => (
                 <li key={j} className="pl-1 leading-relaxed">

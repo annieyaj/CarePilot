@@ -5,60 +5,63 @@ export default function HomePage() {
   const { me, sessionId, loading } = useSession();
   const done = me?.profile.completedOnboarding;
 
-  const startJourney =
-    sessionId && done
-      ? { to: "/chat" as const }
-      : sessionId && !done
-        ? { to: "/input" as const }
-        : { to: "/login" as const, state: { from: "/input" } as const };
+  const checkTarget = sessionId
+    ? ({ to: "/quick-check" as const } as const)
+    : ({ to: "/login" as const, state: { from: "/quick-check" } as const } as const);
 
-  const startBusy = Boolean(sessionId && loading);
+  const checkBusy = Boolean(sessionId && loading);
 
   return (
-    <div className="cp-cover">
-      <div className="cp-cover__panel">
-        <h1 className="cp-home__hero">A copilot for how you eat and feel</h1>
-        <p className="cp-cover__lede">
-          Tell CarePilot what matters—sleep, focus, digestion, soreness, or staying well—and get
-          practical food ideas plus a daily meal plan shaped around you. Chat is your starting
-          point; when you want deeper help, optional Browser Use Cloud can open trusted sites in a
-          live session so you are not hunting tabs alone.
+    <div className="cp-cover cp-cover--landing">
+      <HeroBackdrop />
+
+      <div className="cp-landing cp-landing--hero">
+        <p className="cp-landing__brand">CarePilot</p>
+
+        <div className="cp-landing__rule" aria-hidden />
+
+        <h1 className="cp-landing__headline">
+          <span className="cp-landing__headline-line">Small signals.</span>
+          <span className="cp-landing__headline-line cp-landing__headline-line--accent">Big consequences.</span>
+        </h1>
+
+        <p className="cp-landing__lede">
+          We know that you are busy. We will make them clear — before it&apos;s too late.
         </p>
-        {!done ? (
-          <p className="cp-cover__meta cp-cover__meta--warn">
-            Add a quick health snapshot on the{" "}
-            <Link to="/input" className="cp-inline-link">
-              input page
-            </Link>{" "}
-            so chat suggestions and your meal plan match your profile.
-          </p>
-        ) : (
-          <p className="cp-cover__meta">
-            Your snapshot is saved for this session. View or tweak it anytime in{" "}
-            <Link to="/profile" className="cp-inline-link">
-              Profile
-            </Link>
-            .
-          </p>
-        )}
-        <div className="cp-home__actions">
-          {startBusy ? (
-            <button type="button" className="cp-btn cp-btn--primary" disabled>
+
+        <div className="cp-landing__cta">
+          {checkBusy ? (
+            <button type="button" className="cp-btn cp-btn--primary cp-landing__btn" disabled>
               Loading…
             </button>
           ) : (
             <Link
-              to={startJourney.to}
-              state={"state" in startJourney ? startJourney.state : undefined}
-              className="cp-btn cp-btn--primary"
+              to={checkTarget.to}
+              state={"state" in checkTarget ? checkTarget.state : undefined}
+              className="cp-btn cp-btn--primary cp-landing__btn"
             >
-              Start your journey
+              Start 2-min check
             </Link>
           )}
-          <Link to="/input" className="cp-btn cp-btn--secondary">
-            {done ? "Update health input" : "Enter health information"}
-          </Link>
         </div>
+
+        {sessionId && !loading ? (
+          <nav className="cp-landing__sub" aria-label="Quick links">
+            <Link to="/profile" className="cp-landing__sub-link">
+              Profile
+            </Link>
+            {done ? (
+              <>
+                <span className="cp-landing__sub-sep" aria-hidden>
+                  ·
+                </span>
+                <Link to="/plan" className="cp-landing__sub-link">
+                  Meal plan
+                </Link>
+              </>
+            ) : null}
+          </nav>
+        ) : null}
       </div>
     </div>
   );

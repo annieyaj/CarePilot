@@ -21,17 +21,17 @@ export function SmartButton({
   type = "button",
 }: SmartButtonProps) {
   const base =
-    "inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cp-sage-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
   const variants = {
     primary:
-      "bg-gradient-to-br from-teal-600 to-sky-700 text-white shadow-md hover:shadow-lg hover:brightness-[1.03] active:scale-[0.98]",
-    ghost: "bg-transparent text-sky-700 hover:bg-slate-100",
-    outline: "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-teal-300 hover:bg-slate-50",
+      "bg-gradient-to-br from-cp-sage-600 to-cp-dust-600 text-white shadow-md shadow-cp-sage-900/10 hover:shadow-lg hover:brightness-[1.02] active:scale-[0.98]",
+    ghost: "bg-transparent text-cp-dust-700 hover:bg-slate-100",
+    outline: "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-cp-sage-300 hover:bg-slate-50",
   };
   const spinnerClass =
     variant === "primary"
       ? "border-white/40 border-t-white"
-      : "border-slate-300 border-t-teal-600";
+      : "border-slate-300 border-t-cp-sage-600";
   return (
     <button
       type={type}

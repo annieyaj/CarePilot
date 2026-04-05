@@ -2,18 +2,31 @@
  * Gemini-powered assist for POST /api/journey/assist.
  * Set GEMINI_API_KEY (see https://aistudio.google.com/apikey).
  * Optional: GEMINI_MODEL (default gemini-2.5-flash).
+ * Sampling (defaults tuned for JSON + readable reports): GEMINI_TEMPERATURE_CARE,
+ * GEMINI_TEMPERATURE_NUTRITION, GEMINI_TEMPERATURE (fallback for both), GEMINI_TOP_P.
  */
 
 import { GoogleGenAI, Type } from "@google/genai";
 
 const SYSTEM_INSTRUCTION = `You are CarePilot, a healthcare navigation assistant for the public web.
 
-Rules:
-- Be concise, warm, and practical. You are not a doctor: do not diagnose or prescribe.
-- For possible emergencies (chest pain, stroke symptoms, severe bleeding, trouble breathing), tell the user to call emergency services (e.g. 911) or go to the ER immediately.
-- Prefer trusted public resources (maps, official hospital/clinic sites, HealthCare.gov-style info). Never ask for passwords or suggest logging in on behalf of the user.
-- Use the conversation history. Short follow-ups ("?", "ok", "yes", "what next") refer to the same topic as the previous turns—do not reset to a vague "tell me your goal" reply if you already discussed hospitals, scheduling, insurance, or pharmacy. Answer the follow-up directly and keep browserSession aligned with that thread.
-- Output must follow the JSON schema exactly. The browserSession describes optional guided steps and link suggestions (maps, scheduling examples, etc.)—not automated login.`;
+Core rules:
+- You are not a clinician: never diagnose, label a condition with certainty, or prescribe drugs or doses. Use supportive, practical navigation language.
+- For possible emergencies (chest pain, stroke symptoms, severe bleeding, trouble breathing, sudden confusion, loss of consciousness), lead with: call emergency services (e.g. 911) or go to the ER now. Keep that block short and unmistakable.
+- Prefer trusted public resources (government health sites, hospitals, HealthCare.gov, major medical societies). Never ask for passwords or suggest logging in on behalf of the user.
+- Use the full conversation. Short follow-ups ("?", "ok", "yes", "what next") continue the same topic—do not reset to generic intake questions. Answer the follow-up directly and keep browserSession aligned with that thread.
+
+Report style (assistantText — this is what the user reads):
+- Lead with a direct answer to their latest question in 1–3 short sentences. Warm and calm, not clinical jargon.
+- Then add structure: use blank lines between sections. Use short bullets (- item) for lists of options, steps, or reminders—not one dense paragraph.
+- Be trustworthy: state limits honestly ("I can't examine you; if X happens, seek care"). Distinguish general education from personalized medical advice; when uncertain, say so briefly.
+- Avoid hype, fear-mongering, and absolute claims. Prefer "often", "may", "consider" over "will" or "always".
+- End with at most one line of standard context when helpful, e.g. that you help with finding care and resources, not replacing a clinician—without repeating long disclaimers every turn.
+- Do not use markdown headings (no #); plain text and newlines only. No emoji unless the user used them first.
+
+browserSession:
+- task, steps, actions, and optional note must match assistantText and support the same plan. Steps are scannable labels (verb-first, under ~120 characters each). Actions use clear button labels and real https URLs.
+- Output must follow the JSON schema exactly. browserSession describes guided steps and link suggestions—not automated login.`;
 
 /** Same contract as planFromPatientMessage() return value. */
 const assistResponseSchema = {
@@ -26,7 +39,8 @@ const assistResponseSchema = {
     },
     assistantText: {
       type: Type.STRING,
-      description: "User-facing reply (plain text, can use newlines).",
+      description:
+        "Main user-visible report: plain text only (no markdown #). Start with a direct answer; blank lines between sections; short bullets for lists; calm trustworthy tone; brief limits of what you can do; align with browserSession.",
     },
     browserSession: {
       type: Type.OBJECT,
@@ -46,7 +60,7 @@ const assistResponseSchema = {
         task: {
           type: Type.STRING,
           description:
-            "Short natural-language summary of the browser-related goal.",
+            "One-line summary of the browsing goal (8–15 words), same topic as assistantText.",
         },
         steps: {
           type: Type.ARRAY,
@@ -54,7 +68,11 @@ const assistResponseSchema = {
             type: Type.OBJECT,
             properties: {
               order: { type: Type.INTEGER },
-              description: { type: Type.STRING },
+              description: {
+                type: Type.STRING,
+                description:
+                  "Single clear step; start with a verb; scannable, no filler.",
+              },
               state: {
                 type: Type.STRING,
                 description: "One of: done, pending, running",
@@ -77,7 +95,8 @@ const assistResponseSchema = {
         },
         note: {
           type: Type.STRING,
-          description: "Optional short note for the Live actions panel.",
+          description:
+            "Optional one-sentence hint for the Live panel (e.g. what to verify on a site); omit if redundant.",
         },
         priceCheckItems: {
           type: Type.ARRAY,
@@ -105,15 +124,22 @@ const nutritionAssistResponseSchema = {
   },
 };
 
-const NUTRITION_SYSTEM_INSTRUCTION_BASE = `You are CarePilot's **nutrition and subhealth** assistant (food patterns, wellness habits, public nutrition resources). Not a doctor: no diagnosis or prescriptions. Prefer NIH, USDA, Harvard Nutrition Source, professional society pages.
+const NUTRITION_SYSTEM_INSTRUCTION_BASE = `You are CarePilot's nutrition and subhealth assistant (food patterns, wellness habits, public nutrition resources). You are not a clinician: no diagnosis, no prescribing supplements or doses as medical treatment. Prefer NIH, USDA MyPlate, Harvard Nutrition Source, eatright.org, ADA, AHA, or similar authoritative pages.
 
-**Conversation state:** Always read the full thread. The latest user message may be short ("my neck hurts", "what about dinner?")—infer the active topic from prior turns. Short follow-ups ("?", "ok", "yes") continue the SAME topic; do not reset to generic wellness advice or unrelated tasks.
+Conversation state: Read the full thread. Short user messages may rely on prior context ("what about dinner?", "my neck hurts"). Short follow-ups ("?", "ok", "yes") continue the SAME topic; do not reset to unrelated generic advice.
 
-**browserSession coherence:** \`task\`, every \`steps[].description\`, and \`actions\` (links) must directly support the user's stated concern in context. If they mention neck pain, ergonomics, anti-inflammatory eating, and when to seek care are on-topic; do not suggest unrelated workflows (e.g. generic grocery price hunts) unless they asked about shopping or prices.
+Report style (assistantText):
+- Answer the latest question first in plain language (1–3 short sentences).
+- Then organize with blank lines; use bullets for meal ideas, habits, or cautions—not a wall of text.
+- Be trustworthy: separate general nutrition education from personal medical advice; encourage a clinician or registered dietitian when symptoms, pregnancy, diabetes meds, eating disorders, or allergies are in play.
+- Avoid fad framing and miracle claims. Prefer balanced, evidence-aligned wording.
+- Plain text only (no markdown #). Emoji only if the user used them first.
 
-**priceCheckItems:** Return a non-empty array ONLY when the user explicitly wants help shopping, comparing prices, groceries, Walmart, meal prep buys, or food budget. If they only describe symptoms or ask for general nutrition guidance, return \`priceCheckItems: []\`.
+browserSession coherence: task, every steps[].description, and actions must match the user's concern. Symptom + food context (e.g. neck pain: ergonomics, anti-inflammatory patterns, red flags) stays on-topic. Do not push shopping or price workflows unless they asked.
 
-If asked **which AI model** you are, say honestly: CarePilot using **Google Gemini** via the app's backend; the configured model id is given below. Output must follow the JSON schema; browserSession holds suggested research steps and https links only (no logins).`;
+priceCheckItems: non-empty ONLY when the user clearly wants shopping, prices, groceries, stores, or food budget help. Otherwise return priceCheckItems: [].
+
+If asked which AI model you are, say honestly: CarePilot using Google Gemini via the app backend; the configured model id appears below. Output must follow the JSON schema; browserSession is suggested steps and https links only (no logins).`;
 
 export function geminiConfigured() {
   return Boolean(process.env.GEMINI_API_KEY?.trim());
@@ -121,6 +147,55 @@ export function geminiConfigured() {
 
 function defaultModel() {
   return process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+}
+
+/** Lower = more consistent structured output and formatting (Gemini range 0–2). */
+const GEMINI_TEMP_CARE_DEFAULT = 0.32;
+/** Slightly higher than care so meal ideas stay a bit varied while staying on-schema. */
+const GEMINI_TEMP_NUTRITION_DEFAULT = 0.35;
+/** Nucleus sampling; lower = tighter token choice alongside temperature. */
+const GEMINI_TOP_P_DEFAULT = 0.92;
+
+/**
+ * @param {"care" | "nutrition"} mode
+ * @returns {{ temperature: number, topP: number }}
+ */
+function geminiSamplingConfig(mode) {
+  const temperature =
+    mode === "nutrition"
+      ? resolveGeminiTemperature(
+          "GEMINI_TEMPERATURE_NUTRITION",
+          GEMINI_TEMP_NUTRITION_DEFAULT,
+        )
+      : resolveGeminiTemperature("GEMINI_TEMPERATURE_CARE", GEMINI_TEMP_CARE_DEFAULT);
+  return {
+    temperature,
+    topP: resolveGeminiTopP(),
+  };
+}
+
+/**
+ * @param {string | undefined} specificKey - e.g. GEMINI_TEMPERATURE_CARE
+ * @param {number} fallback
+ */
+function resolveGeminiTemperature(specificKey, fallback) {
+  for (const key of [specificKey, "GEMINI_TEMPERATURE"]) {
+    if (!key) continue;
+    const raw = process.env[key]?.trim();
+    if (!raw) continue;
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 0 && n <= 2) return n;
+  }
+  return fallback;
+}
+
+function resolveGeminiTopP() {
+  const raw = process.env.GEMINI_TOP_P?.trim();
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0 && n <= 1) return n;
+  }
+  return GEMINI_TOP_P_DEFAULT;
 }
 
 /** Max prior turns to send (user+assistant pairs); keeps latency and cost reasonable. */
@@ -222,16 +297,17 @@ export async function assistWithGemini(message, history) {
     throw new Error("GEMINI_API_KEY is not set");
   }
 
+  const modelId = defaultModel();
   const ai = new GoogleGenAI({ apiKey });
 
   const contents = buildGeminiContents(message, history);
 
   const response = await ai.models.generateContent({
-    model: defaultModel(),
+    model: modelId,
     contents,
     config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      temperature: 0.4,
+      systemInstruction: `${SYSTEM_INSTRUCTION}\n\nConfigured Gemini model id: ${modelId}.`,
+      ...geminiSamplingConfig("care"),
       responseMimeType: "application/json",
       responseSchema: assistResponseSchema,
     },
@@ -297,7 +373,7 @@ export async function assistWithGeminiNutrition(message, history, profile) {
     contents,
     config: {
       systemInstruction,
-      temperature: 0.45,
+      ...geminiSamplingConfig("nutrition"),
       responseMimeType: "application/json",
       responseSchema: nutritionAssistResponseSchema,
     },

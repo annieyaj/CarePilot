@@ -57,7 +57,7 @@ export function RecommendationPanel({
                 aria-live="polite"
               >
                 <span
-                  className="size-2 shrink-0 animate-pulse rounded-full bg-sky-500"
+                  className="size-2 shrink-0 animate-pulse rounded-full bg-cp-dust-500"
                   aria-hidden
                 />
                 Planning…
@@ -83,7 +83,7 @@ export function RecommendationPanel({
       aria-label="Recommendations"
     >
       <div className="shrink-0 border-b border-slate-200/80 px-4 py-4 sm:px-5">
-        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-sky-900">
+        <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-cp-sage-800">
           Recommendation
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-500">

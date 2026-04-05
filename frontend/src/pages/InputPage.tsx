@@ -175,6 +175,7 @@ export default function InputPage() {
         digestiveRating,
         musculoskeletalRating,
         immuneRating,
+        symptomTagIds: p?.symptomTagIds ?? [],
         completedOnboarding: true,
       };
       const r = await apiFetch("/api/me/profile", {
