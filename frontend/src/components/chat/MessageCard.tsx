@@ -178,13 +178,23 @@ export function MessageCard(props: MessageCardProps) {
     );
   }
 
-  const intro = introFromAssistantText(message.text);
+  const ns = message.nutritionSections;
+  const intro = ns
+    ? ns.intro.trim()
+    : introFromAssistantText(message.text);
   const hasFoods = message.foodsToTry.length > 0;
   const hasResources = message.resourceLinks.length > 0;
   const resourceSectionTitle = hasResources
     ? titleForResourceLinks(message.resourceLinks.map((r) => r.url))
     : "";
-  const showStructured = hasFoods || hasResources;
+  const showNutritionLayout =
+    ns != null &&
+    (intro.length > 0 ||
+      hasFoods ||
+      Boolean(ns.easeUpOn) ||
+      Boolean(ns.closing));
+  const showStructured =
+    showNutritionLayout || (!ns && (hasFoods || hasResources));
   const showGroceryBtn = showGroceryButton && onCheckGroceryPrices;
 
   return (
@@ -194,7 +204,10 @@ export function MessageCard(props: MessageCardProps) {
           <h3 className="text-sm font-bold tracking-tight text-cp-sage-900">✨ CarePilot</h3>
         </header>
 
-        {showStructured && intro ? (
+        {showNutritionLayout && intro ? (
+          <p className="text-sm leading-relaxed text-slate-600">{intro}</p>
+        ) : null}
+        {!showNutritionLayout && showStructured && intro ? (
           <p className="text-sm leading-relaxed text-slate-600">{intro}</p>
         ) : null}
         {!showStructured ? (
@@ -211,7 +224,7 @@ export function MessageCard(props: MessageCardProps) {
         {hasFoods ? (
           <section className="mt-4">
             <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-cp-sage-700">
-              Foods to try
+              Foods to emphasize
             </h4>
             <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
               {message.foodsToTry.map((item) => (
@@ -219,6 +232,19 @@ export function MessageCard(props: MessageCardProps) {
               ))}
             </ul>
           </section>
+        ) : null}
+
+        {ns?.easeUpOn ? (
+          <section className="mt-4">
+            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600">
+              Ease up on
+            </h4>
+            <p className="text-sm leading-relaxed text-slate-700">{ns.easeUpOn}</p>
+          </section>
+        ) : null}
+
+        {ns?.closing ? (
+          <p className="mt-3 text-xs leading-relaxed text-slate-500">{ns.closing}</p>
         ) : null}
 
         {hasResources ? (

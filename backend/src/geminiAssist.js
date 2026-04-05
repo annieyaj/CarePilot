@@ -41,7 +41,7 @@ const assistResponseSchema = {
     assistantText: {
       type: Type.STRING,
       description:
-        "Main user-visible report: plain text only (no markdown #). Start with a direct answer; blank lines between sections; short bullets for lists; calm trustworthy tone; brief limits of what you can do; align with browserSession.",
+        "Main user-visible report: plain text only (no markdown #). Nutrition mode: follow the fixed layout in the system prompt (brief paragraphs, then Foods to emphasize: with - bullets, then Ease up on: comma-separated). Otherwise: direct answer, blank lines, short - bullets; align with browserSession.",
     },
     browserSession: {
       type: Type.OBJECT,
@@ -135,7 +135,8 @@ const mealPlanUpdateSchema = {
     symptomsMentioned: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: "Short phrases, max 8",
+      description:
+        "Short phrases (max ~8) summarizing concerns across the FULL chat thread, not only the last message—merge earlier turns with the latest.",
     },
     categoryBoosts: {
       type: Type.ARRAY,
@@ -169,18 +170,24 @@ const NUTRITION_SYSTEM_INSTRUCTION_BASE = `You are CarePilot's nutrition and sub
 
 Conversation state: Read the full thread. Short user messages may rely on prior context ("what about dinner?", "my neck hurts"). Short follow-ups ("?", "ok", "yes") continue the SAME topic; do not reset to unrelated generic advice.
 
-Report style (assistantText):
-- Answer the latest question first in plain language (1–3 short sentences).
-- Then organize with blank lines; use bullets for meal ideas, habits, or cautions—not a wall of text.
-- Be trustworthy: separate general nutrition education from personal medical advice; encourage a clinician or registered dietitian when symptoms, pregnancy, diabetes meds, eating disorders, or allergies are in play.
-- Avoid fad framing and miracle claims. Prefer balanced, evidence-aligned wording.
-- Plain text only (no markdown #). Emoji only if the user used them first.
+Report style (assistantText) — use this layout whenever you give food ideas (plain text only; no markdown #; emoji only if the user used them first):
+
+1) Brief answer: 1–3 short sentences (no line may start with "- " here). Blank line.
+
+2) On its own line, exactly: Foods to emphasize:
+   Then 5–12 lines, each starting with "- " and one concrete food or simple meal/snack (e.g. "- Oatmeal with banana and walnuts."). Blank line after the list.
+
+3) On one line: Ease up on: followed by a short comma-separated list of patterns to lighten (not bullet lines), e.g. "Ease up on: large late dinners, sugary drinks, heavy fried foods."
+
+4) Optional: one short extra sentence for cautions or "when to see a clinician" if relevant.
+
+Be trustworthy: separate general nutrition education from personal medical advice; encourage an RD or clinician when symptoms, pregnancy, diabetes meds, eating disorders, or allergies are in play. Avoid fad framing and miracle claims.
 
 browserSession coherence: task, every steps[].description, and actions must match the user's concern. Symptom + food context (e.g. neck pain: ergonomics, anti-inflammatory patterns, red flags) stays on-topic. Do not push shopping or price workflows unless they asked.
 
 priceCheckItems: non-empty ONLY when the user clearly wants shopping, prices, groceries, stores, or food budget help. Otherwise return priceCheckItems: [].
 
-mealPlanUpdate: When the user mentions how they feel, symptoms, or asks for meals tailored to a concern, set apply: true. Fill symptomsMentioned (short phrases from their words). Set categoryBoosts to 1–3 values from: sleep_recovery, cognitive_focus, digestive, musculoskeletal, immune. When you can, also fill weeklyDayMeals with exactly 7 rows (Mon through Sun): each row has day, breakfast, lunch, dinner (one practical sentence each), and snacks (1–3 short strings). Those rows sync to their in-app weekly meal planner (educational ideas only). If a full week is not appropriate, still set apply true with symptoms and categoryBoosts and use an empty weeklyDayMeals array.
+mealPlanUpdate: When ANY turn in the thread mentions how they feel, symptoms, or asks for meals tailored to concerns, set apply: true. Synthesize symptomsMentioned and categoryBoosts from the **entire** conversation (all prior user + assistant turns in context), not just the latest user line—carry forward themes from earlier messages unless the user clearly changes topic. Set categoryBoosts to 1–3 values from: sleep_recovery, cognitive_focus, digestive, musculoskeletal, immune (use more categories if the thread clearly spans multiple). When you can, fill weeklyDayMeals with exactly 7 rows (Mon–Sun) that reflect the **combined** thread; if the user only adds a small follow-up, you may omit weeklyDayMeals so the app keeps the prior week overlay. If a full week is not appropriate, still set apply true with updated symptoms/categoryBoosts and use an empty weeklyDayMeals array.
 
 If asked which AI model you are, say honestly: CarePilot using Google Gemini via the app backend; the configured model id appears below. Output must follow the JSON schema; browserSession is suggested steps and https links only (no logins).`;
 
@@ -403,6 +410,20 @@ function nutritionProfileHint(profile) {
   return `\nUser context (optional): ${bits.join("; ")}.`;
 }
 
+/** Remind model to merge new replies with meal-plan state already saved from earlier chat turns. */
+function nutritionExistingSyncHint(profile) {
+  const ctx = profile?.chatMealPlanContext;
+  if (!ctx || typeof ctx !== "object") return "";
+  const syms = ctx.symptomsMentioned;
+  const cats = ctx.categoryBoosts;
+  if (!syms?.length && !cats?.length) return "";
+  const parts = [];
+  if (syms?.length)
+    parts.push(`planner already lists: ${syms.slice(0, 8).join("; ")}`);
+  if (cats?.length) parts.push(`planner nudges: ${cats.join(", ")}`);
+  return `\nThis session: meal plan was previously synced from chat (${parts.join(" · ")}). Update mealPlanUpdate using the **full** message history; merge with these unless the user clearly replaces a theme.`;
+}
+
 /**
  * Nutrition / subhealth chat via Gemini (same response shape as care assist).
  * @param {string} message
@@ -416,7 +437,7 @@ export async function assistWithGeminiNutrition(message, history, profile) {
   }
 
   const modelId = defaultModel();
-  const systemInstruction = `${NUTRITION_SYSTEM_INSTRUCTION_BASE}\n\nConfigured Gemini model id: ${modelId}.${nutritionProfileHint(profile)}`;
+  const systemInstruction = `${NUTRITION_SYSTEM_INSTRUCTION_BASE}\n\nConfigured Gemini model id: ${modelId}.${nutritionProfileHint(profile)}${nutritionExistingSyncHint(profile)}`;
 
   const ai = new GoogleGenAI({ apiKey });
   const contents = buildGeminiContents(message, history);

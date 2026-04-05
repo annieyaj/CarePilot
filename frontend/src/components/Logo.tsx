@@ -12,7 +12,11 @@ type LogoProps = {
  */
 export function Logo({ variant = "default", className = "" }: LogoProps) {
   const variantClass =
-    variant === "compact" ? "cp-logo--compact" : variant === "hero" ? "cp-logo--hero" : "";
+    variant === "compact"
+      ? "cp-logo--compact"
+      : variant === "hero"
+        ? "cp-logo--hero"
+        : "";
   return (
     <div className={`cp-logo ${variantClass} ${className}`.trim()}>
       <img

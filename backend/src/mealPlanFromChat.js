@@ -110,6 +110,62 @@ export function toStoredChatMealContext(coerced) {
 }
 
 /**
+ * Merge new chat turn into saved meal-plan context so the planner keeps themes from the whole thread.
+ * @param {import('./profileDefaults.js').ChatMealPlanContext | null | undefined} prev
+ * @param {{ symptomsMentioned?: string[], categoryBoosts?: string[], weeklyDayMeals?: unknown }} incoming - mealPlanUpdate body (no `apply`)
+ * @returns {import('./profileDefaults.js').ChatMealPlanContext | null}
+ */
+export function mergeStoredChatMealContext(prev, incoming) {
+  if (!incoming || typeof incoming !== "object") return null;
+
+  const p = prev && typeof prev === "object" ? prev : null;
+  const symMap = new Map();
+  for (const s of p?.symptomsMentioned ?? []) {
+    const t = String(s).trim();
+    if (t) symMap.set(t.toLowerCase().slice(0, 120), t.slice(0, 120));
+  }
+  const incSym = Array.isArray(incoming.symptomsMentioned) ? incoming.symptomsMentioned : [];
+  for (const s of incSym) {
+    const t = typeof s === "string" ? s.trim().slice(0, 120) : "";
+    if (t) symMap.set(t.toLowerCase(), t);
+  }
+  const symptomsMentioned = [...symMap.values()].slice(0, 14);
+
+  const catSet = new Set();
+  for (const c of p?.categoryBoosts ?? []) {
+    if (typeof c === "string" && VALID_CATEGORIES.has(c)) catSet.add(c);
+  }
+  const incCats = Array.isArray(incoming.categoryBoosts) ? incoming.categoryBoosts : [];
+  for (const c of incCats) {
+    if (typeof c === "string" && VALID_CATEGORIES.has(c)) catSet.add(c);
+  }
+  const categoryBoosts = [...catSet].slice(0, 5);
+
+  let weeklyDayMeals = null;
+  const incWeek = incoming.weeklyDayMeals;
+  if (Array.isArray(incWeek) && incWeek.length === 7) {
+    weeklyDayMeals = incWeek;
+  } else if (Array.isArray(p?.weeklyDayMeals) && p.weeklyDayMeals.length === 7) {
+    weeklyDayMeals = p.weeklyDayMeals;
+  }
+
+  if (
+    symptomsMentioned.length === 0 &&
+    categoryBoosts.length === 0 &&
+    !weeklyDayMeals
+  ) {
+    return null;
+  }
+
+  return {
+    updatedAt: new Date().toISOString(),
+    symptomsMentioned,
+    categoryBoosts,
+    weeklyDayMeals,
+  };
+}
+
+/**
  * @param {Array<Record<string, unknown>>} baseWeek
  * @param {import('./profileDefaults.js').ChatMealPlanContext | null | undefined} chatCtx
  */

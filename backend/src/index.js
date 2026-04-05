@@ -16,7 +16,7 @@ import {
 import { planFromPatientMessage } from "./planFromPatientMessage.js";
 import { nutritionAssist } from "./nutritionAssist.js";
 import { buildMealPlanForApi } from "./mealPlan.js";
-import { toStoredChatMealContext } from "./mealPlanFromChat.js";
+import { mergeStoredChatMealContext } from "./mealPlanFromChat.js";
 import { createSession, getSession, updateProfile } from "./sessionStore.js";
 import { computeBmi } from "./profileDefaults.js";
 import {
@@ -364,8 +364,9 @@ app.post("/api/journey/assist", async (req, res) => {
         const plan = await assistWithGeminiNutrition(message, history, profile);
         if (sid && plan.mealPlanUpdate?.apply) {
           const { apply: _a, ...rest } = plan.mealPlanUpdate;
-          const stored = toStoredChatMealContext(rest);
-          if (stored) updateProfile(sid, { chatMealPlanContext: stored });
+          const prev = getSession(sid)?.profile?.chatMealPlanContext ?? null;
+          const merged = mergeStoredChatMealContext(prev, rest);
+          if (merged) updateProfile(sid, { chatMealPlanContext: merged });
         }
         res.json(plan);
         return;
@@ -379,11 +380,12 @@ app.post("/api/journey/assist", async (req, res) => {
         return;
       }
     }
-    const plan = nutritionAssist(message, profile);
+    const plan = nutritionAssist(message, profile, history);
     if (sid && plan.mealPlanUpdate?.apply) {
       const { apply: _a, ...rest } = plan.mealPlanUpdate;
-      const stored = toStoredChatMealContext(rest);
-      if (stored) updateProfile(sid, { chatMealPlanContext: stored });
+      const prev = getSession(sid)?.profile?.chatMealPlanContext ?? null;
+      const merged = mergeStoredChatMealContext(prev, rest);
+      if (merged) updateProfile(sid, { chatMealPlanContext: merged });
     }
     res.json(plan);
   } catch (e) {

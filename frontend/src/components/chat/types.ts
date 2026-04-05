@@ -47,6 +47,13 @@ export type RecommendationAction = {
 
 export type UserChatMessage = { id: string; role: "user"; text: string };
 
+/** When set, chat card uses intro + list + ease-up instead of raw `text` layout. */
+export type NutritionSections = {
+  intro: string;
+  easeUpOn: string | null;
+  closing: string | null;
+};
+
 export type AssistantChatMessage = {
   id: string;
   role: "assistant";
@@ -56,6 +63,8 @@ export type AssistantChatMessage = {
   resourceLinks: ResourceLink[];
   /** Filled when a Browser Use task completes—rendered with clear sections in the chat card. */
   browserRun?: BrowserRunPayload;
+  /** Parsed from assistant text when it follows the nutrition template (brief + foods + ease-up). */
+  nutritionSections?: NutritionSections | null;
 };
 
 export type ChatMessage = UserChatMessage | AssistantChatMessage;
@@ -65,7 +74,8 @@ export function assistantMessageFromApi(
   assistantText: string,
   browserSession: BrowserSession | null | undefined,
 ): AssistantChatMessage {
-  const foodsToTry = parseFoodBullets(assistantText);
+  const parsed = parseNutritionAssistantText(assistantText);
+  const foodsToTry = parsed.isStructured ? parsed.foods : parseFoodBullets(assistantText);
   const resourceLinks: ResourceLink[] =
     browserSession?.actions
       ?.filter((a) => typeof a.url === "string" && a.url.trim())
@@ -76,6 +86,13 @@ export function assistantMessageFromApi(
     text: assistantText,
     foodsToTry,
     resourceLinks,
+    nutritionSections: parsed.isStructured
+      ? {
+          intro: parsed.intro,
+          easeUpOn: parsed.easeUpOn,
+          closing: parsed.closingNote,
+        }
+      : null,
   };
 }
 
@@ -88,6 +105,7 @@ export function assistantMessageFromBrowserRun(id: string, run: BrowserRunPayloa
     text,
     foodsToTry: [],
     resourceLinks: [],
+    nutritionSections: null,
     browserRun: run,
   };
 }
@@ -104,7 +122,108 @@ export function assistantMessageFromMaps(
     text,
     foodsToTry: [],
     resourceLinks: [],
+    nutritionSections: null,
     browserRun: run,
+  };
+}
+
+const FOODS_HEADING = /^foods to (emphasize|try):\s*$/i;
+const EASE_UP_LINE = /^ease up on:\s*(.+)$/i;
+
+/**
+ * Nutrition replies: brief intro, optional "Foods to emphasize:" heading, `-` food lines,
+ * optional "Ease up on: a, b" line, optional closing note. Falls back to isStructured: false
+ * when none of that applies (care / generic replies).
+ */
+export function parseNutritionAssistantText(text: string): {
+  intro: string;
+  foods: string[];
+  easeUpOn: string | null;
+  closingNote: string | null;
+  isStructured: boolean;
+} {
+  const trimmedLines = text.split("\n").map((l) => l.trim());
+  let i = 0;
+  const intro: string[] = [];
+
+  while (i < trimmedLines.length) {
+    const line = trimmedLines[i];
+    if (!line) {
+      i++;
+      continue;
+    }
+    if (FOODS_HEADING.test(line)) {
+      i++;
+      break;
+    }
+    if (EASE_UP_LINE.test(line)) break;
+    if (/^[-*•]\s+/.test(line)) break;
+    intro.push(line);
+    i++;
+  }
+
+  const foods: string[] = [];
+  while (i < trimmedLines.length) {
+    const line = trimmedLines[i];
+    if (!line) {
+      i++;
+      if (foods.length > 0) break;
+      continue;
+    }
+    const bullet = line.match(/^[-*•]\s+(.+)$/);
+    if (bullet) {
+      foods.push(bullet[1].trim());
+      i++;
+      continue;
+    }
+    if (FOODS_HEADING.test(line)) {
+      i++;
+      continue;
+    }
+    break;
+  }
+
+  let easeUpOn: string | null = null;
+  const closing: string[] = [];
+  while (i < trimmedLines.length) {
+    const line = trimmedLines[i];
+    if (!line) {
+      i++;
+      continue;
+    }
+    const ease = line.match(EASE_UP_LINE);
+    if (ease) {
+      easeUpOn = ease[1].trim();
+      i++;
+      continue;
+    }
+    closing.push(line);
+    i++;
+  }
+  const closingNote = closing.join("\n").trim() || null;
+  const introText = intro.join(" ").replace(/\s+/g, " ").trim();
+
+  const hasStructure =
+    foods.length > 0 ||
+    easeUpOn != null ||
+    trimmedLines.some((l) => FOODS_HEADING.test(l) || EASE_UP_LINE.test(l));
+
+  if (!hasStructure) {
+    return {
+      intro: text.trim(),
+      foods: [],
+      easeUpOn: null,
+      closingNote: null,
+      isStructured: false,
+    };
+  }
+
+  return {
+    intro: introText,
+    foods,
+    easeUpOn,
+    closingNote,
+    isStructured: true,
   };
 }
 

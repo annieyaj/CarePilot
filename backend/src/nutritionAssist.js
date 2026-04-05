@@ -15,6 +15,61 @@ const NUTRITION_CAT_TO_BOOST = {
 };
 
 /** Seven-day scaffold for demo when Gemini is off; mirrors structured chat → meal plan sync. */
+/** Matches frontend `parseNutritionAssistantText` + Gemini nutrition template. */
+const MOCK_FOOD_BULLETS = {
+  sleep: [
+    "Oatmeal or whole-grain toast with banana",
+    "Kiwi or tart cherries with dinner",
+    "Herbal caffeine-free tea in the evening",
+    "Handful of almonds or pumpkin seeds",
+    "Salmon or tofu with vegetables and brown rice",
+  ],
+  cognitive: [
+    "Scrambled eggs with spinach on whole-grain toast",
+    "Greek yogurt with blueberries",
+    "Walnuts with an apple",
+    "Baked salmon with quinoa and greens",
+    "Green tea (skip if it affects your sleep)",
+  ],
+  digestive: [
+    "Soft-cooked oats with sliced banana",
+    "Plain yogurt with a drizzle of honey if tolerated",
+    "Ginger tea between meals",
+    "White fish with rice and well-cooked carrots",
+    "Small frequent meals instead of one huge plate",
+  ],
+  musculoskeletal: [
+    "Salad with olive oil vinaigrette and chickpeas",
+    "Berries with yogurt",
+    "Baked salmon with sweet potato",
+    "Tofu stir-fry with mixed vegetables",
+    "Whole-grain wrap with turkey or hummus",
+  ],
+  immune: [
+    "Citrus segments or bell pepper strips",
+    "Broccoli or kale with garlic and olive oil",
+    "Kefir or yogurt if dairy is tolerated",
+    "Lentil soup with vegetables",
+    "Trail mix with nuts and seeds",
+  ],
+  subhealth: [
+    "Half-plate vegetables with olive oil",
+    "Beans or lentils with brown rice",
+    "Grilled chicken or tofu bowl",
+    "Fruit and nuts as snacks",
+    "Water throughout the day",
+  ],
+};
+
+const MOCK_EASE_UP = {
+  sleep: "alcohol right before bed, very heavy late dinners, late caffeine",
+  cognitive: "all-day sugary drinks, skipping breakfast, ultra-processed snacks on repeat",
+  digestive: "sudden huge fiber jumps, known personal triggers, very spicy meals if they flare you",
+  musculoskeletal: "chronic excess alcohol, very low protein, relying only on supplements",
+  immune: "replacing meals with juice-only days, chronic ultra-processed patterns",
+  subhealth: "sugary drinks, skipping vegetables most days, erratic meal timing",
+};
+
 function genericMockWeekly(themeShort) {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   return days.map((day) => ({
@@ -214,15 +269,40 @@ function detectCategory(text, profile) {
 }
 
 /**
- * @param {string} message
+ * @param {string} message - Current user message (also last line of thread)
  * @param {import('./profileDefaults.js').HealthProfile | null} [profile]
+ * @param {Array<{ role?: string, text?: string }>} [history] - Prior turns; all **user** lines are combined for routing + mealPlanUpdate symptoms
  */
-export function nutritionAssist(message, profile = null) {
-  const trimmed = String(message ?? "").trim();
-  const { key, def } = detectCategory(trimmed || "wellness", profile);
+export function nutritionAssist(message, profile = null, history = []) {
+  const userLines = [];
+  if (Array.isArray(history)) {
+    for (const h of history) {
+      if (h && h.role === "user" && typeof h.text === "string" && h.text.trim()) {
+        userLines.push(h.text.trim());
+      }
+    }
+  }
+  const cur = String(message ?? "").trim();
+  if (cur) userLines.push(cur);
+
+  const combined = userLines.join("\n").trim();
+  const trimmed = combined || "wellness";
+  const { key, def } = detectCategory(trimmed, profile);
   const hint = profileHints(profile);
 
-  const assistantText = [def.assistantLead, "", def.foods, hint].filter(Boolean).join("\n");
+  const bullets = MOCK_FOOD_BULLETS[key] ?? MOCK_FOOD_BULLETS.subhealth;
+  const ease = MOCK_EASE_UP[key] ?? MOCK_EASE_UP.subhealth;
+  const assistantText = [
+    def.assistantLead,
+    "",
+    "Foods to emphasize:",
+    ...bullets.map((b) => `- ${b}`),
+    "",
+    `Ease up on: ${ease}.`,
+    hint ? `\n${hint.trim()}` : "",
+  ]
+    .join("\n")
+    .trim();
 
   const id = `nut-${Date.now().toString(36)}`;
 
@@ -230,9 +310,12 @@ export function nutritionAssist(message, profile = null) {
   let mealPlanUpdate;
   if (key !== "subhealth") {
     const boost = NUTRITION_CAT_TO_BOOST[key];
+    const symptomsMentioned = userLines.length
+      ? [...new Set(userLines.map((u) => u.slice(0, 100)))].slice(-8)
+      : [trimmed.slice(0, 96) || def.task];
     mealPlanUpdate = {
       apply: true,
-      symptomsMentioned: [trimmed.slice(0, 96) || def.task],
+      symptomsMentioned,
       categoryBoosts: boost ? [boost] : [],
       weeklyDayMeals: genericMockWeekly(def.task),
     };
