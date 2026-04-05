@@ -1,20 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "../api/session";
+import { ChatWindow } from "../components/chat/ChatWindow";
+import { CloudTaskOutput } from "../components/chat/CloudTaskOutput";
+import { cloudStatusStillRunning } from "../components/chat/cloudStatus";
+import type { BrowserSession, CloudSessionView } from "../components/chat/journeyTypes";
+import { buildRecommendationActions } from "../components/chat/recommendationActions";
+import { RecommendationPanel } from "../components/chat/RecommendationPanel";
+import type { ChatMessage, RecommendationAction } from "../components/chat/types";
+import { assistantMessageFromApi } from "../components/chat/types";
 
 function cloudField<T>(o: Record<string, unknown>, camel: string, snake: string): T | undefined {
   const v = o[camel] ?? o[snake];
   return v as T | undefined;
 }
-
-type CloudSessionView = {
-  id: string;
-  status: string;
-  liveUrl: string | null;
-  lastStepSummary: string | null;
-  stepCount: number;
-  output: unknown;
-  isTaskSuccessful: boolean | null;
-};
 
 function parseCloudSession(raw: Record<string, unknown>): CloudSessionView {
   return {
@@ -28,55 +26,6 @@ function parseCloudSession(raw: Record<string, unknown>): CloudSessionView {
     isTaskSuccessful:
       (cloudField<boolean | null>(raw, "isTaskSuccessful", "is_task_successful") ?? null) ?? null,
   };
-}
-
-function cloudStatusStillRunning(status: string) {
-  return status === "created" || status === "idle" || status === "running";
-}
-
-type Role = "user" | "assistant";
-
-type Message = { id: string; role: Role; text: string };
-
-type BrowserStep = { order: number; description: string; state: string };
-
-type BrowserAction = { id: string; label: string; url: string };
-
-type BrowserSession = {
-  id: string;
-  mode: string;
-  status: string;
-  task: string;
-  steps: BrowserStep[];
-  actions: BrowserAction[];
-  note?: string;
-  priceCheckItems?: string[];
-};
-
-type GroceryPriceRow = { store: string; product: string; price: string; productUrl?: string };
-type GroceryPriceItem = { query: string; results: GroceryPriceRow[] };
-
-function parseGroceryCloudOutput(output: unknown): { items: GroceryPriceItem[] } | null {
-  if (output == null) return null;
-  if (typeof output === "object" && output !== null) {
-    const o = output as { items?: unknown };
-    if (Array.isArray(o.items) && o.items.length > 0) {
-      return { items: o.items as GroceryPriceItem[] };
-    }
-  }
-  if (typeof output !== "string") return null;
-  const raw = output
-    .trim()
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```\s*$/m, "")
-    .trim();
-  try {
-    const j = JSON.parse(raw) as { items?: GroceryPriceItem[] };
-    if (j && Array.isArray(j.items) && j.items.length > 0) return { items: j.items };
-  } catch {
-    /* ignore */
-  }
-  return null;
 }
 
 function taskFromLivePlan(live: BrowserSession, lastUserMessage: string) {
@@ -94,63 +43,15 @@ function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function CloudTaskOutput({ output, status }: { output: unknown; status: string }) {
-  if (output == null || cloudStatusStillRunning(status)) return null;
-  const parsed = parseGroceryCloudOutput(output);
-  if (parsed) {
-    return (
-      <div className="cp-live__grocery">
-        <p className="cp-live__grocery-title">Grocery price snapshot</p>
-        {parsed.items.map((row) => (
-          <div key={row.query} className="cp-live__grocery-block">
-            <p className="cp-live__grocery-query">{row.query}</p>
-            <table className="cp-live__grocery-table">
-              <thead>
-                <tr>
-                  <th scope="col">Store</th>
-                  <th scope="col">Product</th>
-                  <th scope="col">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(row.results ?? []).map((r, i) => (
-                  <tr key={`${row.query}-${r.store}-${i}`}>
-                    <td>{r.store}</td>
-                    <td>
-                      {r.productUrl ? (
-                        <a href={r.productUrl} target="_blank" rel="noreferrer">
-                          {r.product || "—"}
-                        </a>
-                      ) : (
-                        (r.product ?? "—")
-                      )}
-                    </td>
-                    <td>{r.price ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <pre className="cp-live__output">
-      {typeof output === "string" ? output : JSON.stringify(output, null, 2)}
-    </pre>
-  );
-}
+const WELCOME_TEXT =
+  "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. Mention your concern or use the wording from your profile. With BROWSER_USE_API_KEY on the server, use “Check grocery prices” to run Browser Use Cloud on Walmart, Vons, and Ralphs—results may be incomplete if sites block automation.";
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      text:
-        "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. Mention your concern or use the wording from your profile. With BROWSER_USE_API_KEY on the server, use “Check grocery prices” to run Browser Use Cloud on Walmart, Vons, and Ralphs—results may be incomplete if sites block automation.",
-    },
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    assistantMessageFromApi("welcome", WELCOME_TEXT, null),
   ]);
+  const [actions, setActions] = useState<RecommendationAction[]>([]);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
   const [draft, setDraft] = useState("");
   const [live, setLive] = useState<BrowserSession | null>(null);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -160,8 +61,16 @@ export default function ChatPage() {
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const lastPatientMessageRef = useRef("");
   const cloudPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const last = [...messagesRef.current].reverse().find((m) => m.role === "assistant");
+    if (!last || last.role !== "assistant") return;
+    setActions(buildRecommendationActions(last.text, live, cloudConfigured));
+  }, [cloudConfigured, live]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -255,6 +164,20 @@ export default function ChatPage() {
     }
   }
 
+  async function handleBrowserUse(action: RecommendationAction) {
+    console.log("Running Browser Use for:", action.label);
+    await startCloudTask();
+  }
+
+  function toggleChecked(id: string) {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function send() {
     const text = draft.trim();
     if (!text) return;
@@ -283,207 +206,146 @@ export default function ChatPage() {
       }
       const assistantText = (data as { assistantText?: string }).assistantText;
       const browserSession = (data as { browserSession?: BrowserSession }).browserSession;
-      setMessages((m) => [
-        ...m,
-        {
-          id: makeId(),
-          role: "assistant",
-          text: assistantText ?? "No reply from planner.",
-        },
-      ]);
+      const reply = assistantText ?? "No reply from planner.";
+      const asst = assistantMessageFromApi(makeId(), reply, browserSession);
+      setMessages((m) => [...m, asst]);
       if (browserSession) setLive(browserSession);
+      else setLive(null);
+      setActions(buildRecommendationActions(reply, browserSession ?? null, cloudConfigured));
+      setCheckedIds(new Set());
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Request failed";
       setLiveError(msg);
-      setMessages((m) => [
-        ...m,
-        {
-          id: makeId(),
-          role: "assistant",
-          text: `Could not reach the planner (${msg}). Is the API running on port 3001?`,
-        },
-      ]);
+      const errText = `Could not reach the planner (${msg}). Is the API running on port 3001?`;
+      setMessages((m) => [...m, assistantMessageFromApi(makeId(), errText, null)]);
+      setActions([]);
+      setCheckedIds(new Set());
     } finally {
       setLiveLoading(false);
     }
   }
 
+  const liveSummary = live ? (
+    <p className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
+        <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
+        {live.mode} · {live.status}
+      </span>
+      {cloudConfigured ? (
+        <span className="text-slate-500">Cloud ready</span>
+      ) : (
+        <span className="text-amber-700">Add BROWSER_USE_API_KEY for Cloud</span>
+      )}
+    </p>
+  ) : liveLoading ? (
+    <p className="flex items-center gap-2 text-slate-600">
+      <span className="size-2 animate-pulse rounded-full bg-sky-500" aria-hidden />
+      Planning…
+    </p>
+  ) : (
+    <p className="text-slate-500">Idle — chat to generate a plan.</p>
+  );
+
   return (
-    <div className="cp-journey">
-      <section className="cp-chat" aria-label="Nutrition chat">
-        <header className="cp-chat__head">
-          <h1 className="cp-chat__title">Food &amp; subhealth chat</h1>
-          <p className="cp-chat__sub">
-            Nutrition plan + optional grocery price check on Browser Use Cloud
+    <div className="flex min-h-0 flex-1 flex-col bg-slate-100 lg:flex-row">
+      <ChatWindow
+        className="lg:min-w-0 lg:flex-[3] lg:max-w-none"
+        listRef={listRef}
+        messages={messages}
+        draft={draft}
+        setDraft={setDraft}
+        onSend={() => void send()}
+        liveLoading={liveLoading}
+        cloudConfigured={cloudConfigured}
+        liveExists={!!live}
+        onCheckGroceryPrices={
+          cloudConfigured && live
+            ? () =>
+                void handleBrowserUse({
+                  id: "browseruse-grocery",
+                  label: "Check grocery prices",
+                  type: "browseruse",
+                })
+            : undefined
+        }
+        cloudActive={cloudActive}
+      />
+      <RecommendationPanel
+        actions={actions}
+        checkedIds={checkedIds}
+        onToggle={toggleChecked}
+        onBrowserUse={(a) => void handleBrowserUse(a)}
+        browserUseLoading={cloudActive}
+        browserUseDisabled={!live || !cloudConfigured}
+        liveSummary={liveSummary}
+      >
+        {liveError ? (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+            {liveError}
           </p>
-        </header>
-        <div className="cp-chat__messages" ref={listRef} role="log" aria-live="polite">
-          {messages.map((msg) => (
-            <div key={msg.id} className={"cp-bubble cp-bubble--" + msg.role}>
-              {msg.text.split("\n").map((line, i) => (
-                <span key={i}>
-                  {i > 0 ? <br /> : null}
-                  {line}
-                </span>
+        ) : null}
+        {live?.note ? (
+          <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            {live.note}
+          </p>
+        ) : null}
+        {live && live.actions.length > 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+              Quick links
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {live.actions.map((a) => (
+                <a
+                  key={a.id}
+                  href={a.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-sky-700 underline-offset-2 hover:underline"
+                >
+                  {a.label}
+                </a>
               ))}
             </div>
-          ))}
-        </div>
-        <div className="cp-chat__composer">
-          <label className="visually-hidden" htmlFor="cp-chat-input">
-            Message
-          </label>
-          <textarea
-            id="cp-chat-input"
-            className="cp-chat__input"
-            rows={2}
-            placeholder="e.g. Foods that might help with sleep and recovery…"
-            value={draft}
-            disabled={liveLoading}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void send();
-              }
-            }}
-          />
-          <button
-            type="button"
-            className="cp-btn cp-btn--primary"
-            onClick={() => void send()}
-            disabled={liveLoading}
-          >
-            {liveLoading ? "…" : "Send"}
-          </button>
-        </div>
-      </section>
-      <aside className="cp-live" aria-label="Live actions">
-        <h2 className="cp-live__title">Live actions</h2>
-        <p className="cp-live__sub">
-          {live
-            ? `${live.mode} · ${live.status}${cloudConfigured ? " · Cloud ready" : ""}`
-            : cloudConfigured
-              ? "Plan + Browser Use Cloud"
-              : "Plan (add BROWSER_USE_API_KEY for Cloud)"}
-        </p>
-        <div className="cp-live__card">
-          {liveError ? (
-            <p className="cp-live__hint" role="alert">
-              {liveError}
+          </div>
+        ) : null}
+        {cloudError ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+            Cloud: {cloudError}
+          </p>
+        ) : null}
+        {cloudSession ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <p className="text-xs text-slate-600">
+              Session <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{cloudSession.id.slice(0, 8)}…</code>{" "}
+              · {cloudSession.status}
+              {cloudSession.stepCount > 0 ? ` · ${cloudSession.stepCount} steps` : null}
             </p>
-          ) : null}
-          {liveLoading ? (
-            <div className="cp-live__status">
-              <span className="cp-live__dot cp-live__dot--pulse" aria-hidden />
-              Planning…
-            </div>
-          ) : live ? (
-            <>
-              <div className="cp-live__status">
-                <span className="cp-live__dot cp-live__dot--on" aria-hidden />
-                {live.task}
-              </div>
-              {live.note ? <p className="cp-live__hint">{live.note}</p> : null}
-              <ol className="cp-live__steps">
-                {live.steps.map((s) => (
-                  <li
-                    key={s.order}
-                    className={
-                      "cp-live__step cp-live__step--" + (s.state === "done" ? "done" : "pending")
-                    }
-                  >
-                    <span className="cp-live__step-num">{s.order}</span>
-                    {s.description}
-                  </li>
-                ))}
-              </ol>
-              {live.actions.length > 0 ? (
-                <div className="cp-live__actions">
-                  {live.actions.map((a) => (
-                    <a
-                      key={a.id}
-                      className="cp-btn cp-btn--secondary cp-live__action"
-                      href={a.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {a.label}
-                    </a>
-                  ))}
-                </div>
-              ) : null}
-              {cloudConfigured ? (
-                <div className="cp-live__cloud">
-                  <button
-                    type="button"
-                    className="cp-btn cp-btn--primary cp-live__action"
-                    disabled={cloudActive}
-                    onClick={() => void startCloudTask()}
-                  >
-                    {cloudActive ? "Cloud agent running…" : "Check grocery prices"}
-                  </button>
-                  <p className="cp-live__hint cp-live__hint--tight">
-                    Uses{" "}
-                    <a href="https://cloud.browser-use.com/" target="_blank" rel="noreferrer">
-                      Browser Use Cloud
-                    </a>{" "}
-                    (your balance). Searches Walmart, Vons, and Ralphs for the suggested items; prices
-                    are indicative only.
-                  </p>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <div className="cp-live__status">
-                <span className="cp-live__dot" aria-hidden />
-                Idle
-              </div>
-              <p className="cp-live__hint">
-                Send a message to generate next steps. A real Browser Use agent would run these in
-                Playwright and stream progress here after you approve each session.
-              </p>
-            </>
-          )}
-          {cloudError ? (
-            <p className="cp-live__hint cp-live__cloud-error" role="alert">
-              Cloud: {cloudError}
-            </p>
-          ) : null}
-          {cloudSession ? (
-            <div className="cp-live__cloud-panel">
-              <p className="cp-live__cloud-meta">
-                Session <code className="cp-live__code">{cloudSession.id.slice(0, 8)}…</code> ·{" "}
-                {cloudSession.status}
-                {cloudSession.stepCount > 0 ? ` · ${cloudSession.stepCount} steps` : null}
-              </p>
-              {cloudSession.lastStepSummary ? (
-                <p className="cp-live__hint">{cloudSession.lastStepSummary}</p>
-              ) : null}
-              {cloudSession.liveUrl ? (
-                <>
-                  <a
-                    className="cp-live__live-link"
-                    href={cloudSession.liveUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open live browser (new tab)
-                  </a>
-                  <iframe
-                    className="cp-live__iframe"
-                    title="Browser Use Cloud live view"
-                    src={cloudSession.liveUrl}
-                    sandbox="allow-scripts allow-same-origin allow-popups"
-                  />
-                </>
-              ) : null}
-              <CloudTaskOutput output={cloudSession.output} status={cloudSession.status} />
-            </div>
-          ) : null}
-        </div>
-      </aside>
+            {cloudSession.lastStepSummary ? (
+              <p className="mt-2 text-xs text-slate-600">{cloudSession.lastStepSummary}</p>
+            ) : null}
+            {cloudSession.liveUrl ? (
+              <>
+                <a
+                  className="mt-2 inline-block text-sm font-semibold text-sky-700 underline-offset-2 hover:underline"
+                  href={cloudSession.liveUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open live browser (new tab)
+                </a>
+                <iframe
+                  className="mt-2 h-48 w-full rounded-lg border border-slate-200"
+                  title="Browser Use Cloud live view"
+                  src={cloudSession.liveUrl}
+                  sandbox="allow-scripts allow-same-origin allow-popups"
+                />
+              </>
+            ) : null}
+            <CloudTaskOutput output={cloudSession.output} status={cloudSession.status} />
+          </div>
+        ) : null}
+      </RecommendationPanel>
     </div>
   );
 }

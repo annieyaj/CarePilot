@@ -1,0 +1,34 @@
+import type { BrowserSession } from "./journeyTypes";
+import type { RecommendationAction } from "./types";
+import { parseAssistantLists } from "./types";
+
+export function buildRecommendationActions(
+  assistantText: string,
+  live: BrowserSession | null,
+  cloudConfigured: boolean,
+): RecommendationAction[] {
+  const actions: RecommendationAction[] = [];
+  if (live?.steps?.length) {
+    for (const s of live.steps) {
+      actions.push({
+        id: `step-${live.id}-${s.order}`,
+        label: s.description,
+        type: "task",
+      });
+    }
+  } else {
+    const { foodsToTry } = parseAssistantLists(assistantText, null);
+    foodsToTry.forEach((label, i) => {
+      actions.push({ id: `task-${i}-${label.slice(0, 12)}`, label, type: "task" });
+    });
+  }
+  if (cloudConfigured && live) {
+    actions.push({
+      id: "browseruse-grocery",
+      label: "Check grocery prices (Walmart, Vons, Ralphs)",
+      type: "browseruse",
+      buttonLabel: "Run",
+    });
+  }
+  return actions;
+}
