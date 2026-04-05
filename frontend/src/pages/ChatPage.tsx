@@ -11,16 +11,11 @@ import type {
 } from "../components/chat/journeyTypes";
 import { buildRecommendationActions } from "../components/chat/recommendationActions";
 import { titleForResourceLinks } from "../components/chat/resourceLinks";
-import { MapsLocationPanel } from "../components/chat/MapsLocationPanel";
-import type { CareIntent } from "../components/chat/MapsLocationPanel";
 import { RecommendationPanel } from "../components/chat/RecommendationPanel";
 import { browserRunPayloadFromOutput } from "../components/chat/cloudTaskFormat";
 import type { ChatMessage, RecommendationAction } from "../components/chat/types";
-import {
-  assistantMessageFromApi,
-  assistantMessageFromBrowserRun,
-  assistantMessageFromMaps,
-} from "../components/chat/types";
+import { assistantMessageFromApi, assistantMessageFromBrowserRun } from "../components/chat/types";
+import { readNearbyGroceryStoreNames } from "../maps/nearbyStoreHintsStorage";
 
 function isCloudRunning(view: CloudSessionView): boolean {
   if (typeof view.stillRunning === "boolean") return view.stillRunning;
@@ -111,7 +106,7 @@ function buildCloudRequestBody(
       priceCheckItems: items,
       nutritionSummary,
     };
-    const hints = nearbyStoreHints.map((x) => x.trim()).filter(Boolean).slice(0, 12);
+    const hints = nearbyStoreHints.map((x) => x.trim()).filter(Boolean).slice(0, 3);
     if (hints.length) grocery.nearbyStoreHints = hints;
     return JSON.stringify({ grocery });
   }
@@ -146,7 +141,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi! I'm your CarePilot nutrition assistant.\n\nAsk about food for sleep, focus, digestion, muscles/joints, or immunity. I don't just suggest—I return a plan you can run: when you see steps in the side panel, check what you want and tap “Run selected” so Browser Use Cloud can execute in a real browser (add BROWSER_USE_API_KEY on the server). Your profile and meal plan stay in sync when you're signed in.";
+  "Hi, I'm CarePilot.\nShare your symptoms, and I'll recommend foods + build a simple meal plan you can follow.";
 
 export default function ChatPage() {
   const { refreshMe, sessionId } = useSession();
@@ -172,17 +167,6 @@ export default function ChatPage() {
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [journeyIntent, setJourneyIntent] = useState<string | null>(null);
-  const [mapsConfigured, setMapsConfigured] = useState(false);
-  const [mapsLoading, setMapsLoading] = useState(false);
-  const [mapsError, setMapsError] = useState<string | null>(null);
-  const [userLatLng, setUserLatLng] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationLabel, setLocationLabel] = useState<string | null>(null);
-  const [addressInput, setAddressInput] = useState("");
-  /** Store names from last Maps grocery search — passed to Browser Use price tasks. */
-  const [nearbyGroceryPlaces, setNearbyGroceryPlaces] = useState<Array<{ name: string }>>([]);
-  const [groceryMapCount, setGroceryMapCount] = useState(0);
-  const [careMapCount, setCareMapCount] = useState(0);
-  const [careIntent, setCareIntent] = useState<CareIntent>("emergency");
   const listRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -225,13 +209,6 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
-    void apiFetch("/api/journey/places-status")
-      .then((r) => r.json())
-      .then((d: { configured?: boolean }) => setMapsConfigured(Boolean(d.configured)))
-      .catch(() => setMapsConfigured(false));
-  }, []);
-
-  useEffect(() => {
     const st = location.state as
       | { shopRecipeDraft?: string }
       | null
@@ -264,182 +241,7 @@ export default function ChatPage() {
   }
 
   function nearbyHintsForCloud(): string[] {
-    return nearbyGroceryPlaces.map((p) => p.name.trim()).filter(Boolean);
-  }
-
-  function useMyLocation() {
-    if (!navigator.geolocation) {
-      setMapsError("Location is not available in this browser.");
-      return;
-    }
-    setMapsLoading(true);
-    setMapsError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setUserLatLng({ lat, lng });
-        setLocationLabel(
-          `Near ${lat.toFixed(4)}, ${lng.toFixed(4)} (browser location)`,
-        );
-        setMapsLoading(false);
-      },
-      (err) => {
-        setMapsError(err.message || "Could not read location");
-        setMapsLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 60_000 },
-    );
-  }
-
-  async function searchAddressToCoords() {
-    const q = addressInput.trim();
-    if (!q) return;
-    setMapsLoading(true);
-    setMapsError(null);
-    try {
-      const res = await apiFetch("/api/places/geocode", {
-        method: "POST",
-        body: JSON.stringify({ address: q }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        lat?: number;
-        lng?: number;
-        formattedAddress?: string;
-        error?: string;
-      };
-      if (!res.ok) throw new Error(data.error ?? res.statusText);
-      if (
-        typeof data.lat !== "number" ||
-        typeof data.lng !== "number" ||
-        !Number.isFinite(data.lat) ||
-        !Number.isFinite(data.lng)
-      ) {
-        throw new Error("No coordinates returned");
-      }
-      setUserLatLng({ lat: data.lat, lng: data.lng });
-      setLocationLabel(data.formattedAddress ?? q);
-    } catch (e) {
-      setMapsError(e instanceof Error ? e.message : "Geocoding failed");
-    } finally {
-      setMapsLoading(false);
-    }
-  }
-
-  async function findNearbyGroceryMaps() {
-    if (!userLatLng) {
-      setMapsError("Set your location first (button or address search).");
-      return;
-    }
-    setMapsLoading(true);
-    setMapsError(null);
-    try {
-      const res = await apiFetch("/api/places/nearby-grocery", {
-        method: "POST",
-        body: JSON.stringify({
-          lat: userLatLng.lat,
-          lng: userLatLng.lng,
-          radiusMeters: 10000,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        places?: Array<{
-          name: string;
-          address: string;
-          mapsUrl: string;
-          rating?: number;
-          distanceMeters?: number | null;
-        }>;
-        error?: string;
-      };
-      if (!res.ok) throw new Error(data.error ?? res.statusText);
-      const places = data.places ?? [];
-      setNearbyGroceryPlaces(places.map((p) => ({ name: p.name })));
-      setGroceryMapCount(places.length);
-      const mapsPlaces = places.map((p) => ({
-        name: p.name,
-        address: p.address || undefined,
-        mapsUrl: p.mapsUrl,
-        rating: p.rating != null ? String(p.rating) : undefined,
-        distanceMeters: p.distanceMeters ?? undefined,
-      }));
-      setMessages((m) => [
-        ...m,
-        assistantMessageFromMaps(makeId(), {
-          kind: "maps",
-          title: "Nearby grocery stores",
-          subtitle:
-            "Approximate distance from your search point. Open Maps to verify hours and directions.",
-          mapsContext: "grocery",
-          mapsPlaces,
-        }),
-      ]);
-    } catch (e) {
-      setMapsError(e instanceof Error ? e.message : "Maps request failed");
-    } finally {
-      setMapsLoading(false);
-    }
-  }
-
-  async function findCareFacilitiesMaps() {
-    if (!userLatLng) {
-      setMapsError("Set your location first (button or address search).");
-      return;
-    }
-    setMapsLoading(true);
-    setMapsError(null);
-    const titles: Record<CareIntent, string> = {
-      emergency: "Emergency room (nearby)",
-      urgent: "Urgent care (nearby)",
-      hospital: "Hospitals (nearby)",
-    };
-    try {
-      const res = await apiFetch("/api/places/care-facilities", {
-        method: "POST",
-        body: JSON.stringify({
-          lat: userLatLng.lat,
-          lng: userLatLng.lng,
-          intent: careIntent,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        places?: Array<{
-          name: string;
-          address: string;
-          mapsUrl: string;
-          rating?: number;
-          distanceMeters?: number | null;
-        }>;
-        disclaimer?: string;
-        error?: string;
-      };
-      if (!res.ok) throw new Error(data.error ?? res.statusText);
-      const places = data.places ?? [];
-      setCareMapCount(places.length);
-      const mapsPlaces = places.map((p) => ({
-        name: p.name,
-        address: p.address || undefined,
-        mapsUrl: p.mapsUrl,
-        rating: p.rating != null ? String(p.rating) : undefined,
-        distanceMeters: p.distanceMeters ?? undefined,
-      }));
-      setMessages((m) => [
-        ...m,
-        assistantMessageFromMaps(makeId(), {
-          kind: "maps",
-          title: titles[careIntent],
-          subtitle:
-            "Public listings only—not medical advice. For emergencies call 911 (US).",
-          mapsContext: "care",
-          mapsPlaces,
-          mapsDisclaimer: data.disclaimer,
-        }),
-      ]);
-    } catch (e) {
-      setMapsError(e instanceof Error ? e.message : "Maps request failed");
-    } finally {
-      setMapsLoading(false);
-    }
+    return readNearbyGroceryStoreNames();
   }
 
   async function startCloudTask(options?: { forceIncludeGrocery?: boolean }) {
@@ -715,24 +517,6 @@ export default function ChatPage() {
           )
         }
         liveSummary={liveSummary}
-        sidebarTop={
-          <MapsLocationPanel
-            configured={mapsConfigured}
-            loading={mapsLoading}
-            error={mapsError}
-            locationLabel={locationLabel}
-            onUseMyLocation={() => useMyLocation()}
-            address={addressInput}
-            onAddressChange={setAddressInput}
-            onSearchAddress={() => void searchAddressToCoords()}
-            careIntent={careIntent}
-            onCareIntentChange={setCareIntent}
-            onFindGrocery={() => void findNearbyGroceryMaps()}
-            onFindCare={() => void findCareFacilitiesMaps()}
-            groceryResultCount={groceryMapCount}
-            careResultCount={careMapCount}
-          />
-        }
       >
         {live?.note ? (
           <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ChatPage from "./pages/ChatPage";
+import FindNearbyPage from "./pages/FindNearbyPage";
 import HomePage from "./pages/HomePage";
 import InputPage from "./pages/InputPage";
 import LoginPage from "./pages/LoginPage";
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="plan" element={<PlanPage />} />
+          <Route path="find-nearby" element={<FindNearbyPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -9,6 +9,7 @@ const tabs: Tab[] = [
   { to: "/input", label: "Health input" },
   { to: "/chat", label: "Chat" },
   { to: "/plan", label: "Meal plan" },
+  { to: "/find-nearby", label: "Find nearby" },
 ];
 
 export default function AppLayout() {

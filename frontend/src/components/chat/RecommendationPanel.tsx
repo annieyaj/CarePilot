@@ -22,8 +22,6 @@ type RecommendationPanelProps = {
   runLoading: boolean;
   runDisabled: boolean;
   liveSummary?: ReactNode;
-  /** Shown at the top of the scroll area (e.g. Location & Maps) so it stays easy to find. */
-  sidebarTop?: ReactNode;
   children?: ReactNode;
 };
 
@@ -41,7 +39,6 @@ export function RecommendationPanel({
   runLoading,
   runDisabled,
   liveSummary,
-  sidebarTop,
   children,
 }: RecommendationPanelProps) {
   if (minimal) {
@@ -126,7 +123,6 @@ export function RecommendationPanel({
       </div>
 
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-4 sm:px-5">
-        {sidebarTop ? <div className="pb-1">{sidebarTop}</div> : null}
         {planLoading || plan ? (
           <BrowserPlanOverview
             live={planLoading ? null : plan}

@@ -1,3 +1,4 @@
+import { Logo } from "../Logo";
 import { AgentTextProse } from "./AgentTextProse";
 import { GroceryPriceBlock } from "./GroceryPriceBlock";
 import { SmartButton } from "./SmartButton";
@@ -17,7 +18,12 @@ function PlaceCard({ p }: { p: CarePlaceRow }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <p className="font-semibold text-slate-900">{p.name}</p>
         {dist ? (
-          <span className="shrink-0 text-xs font-medium text-slate-500">≈ {dist}</span>
+          <span
+            className="shrink-0 rounded-md bg-gradient-to-br from-cp-sage-200 to-cp-sage-300/90 px-2.5 py-1 text-xs font-bold tabular-nums tracking-tight text-cp-sage-950 shadow-sm ring-1 ring-cp-sage-500/25"
+            title="Approximate straight-line distance from your search point"
+          >
+            ≈ {dist}
+          </span>
         ) : null}
       </div>
       {p.address ? <p className="mt-1 text-sm text-slate-600">{p.address}</p> : null}
@@ -103,8 +109,9 @@ export function MessageCard(props: MessageCardProps) {
                 : "border-cp-sage-200/90"
           }`}
         >
-          <header className="mb-3 border-b border-slate-100 pb-2">
-            <h3 className="text-sm font-bold tracking-tight text-cp-dust-700">✨ CarePilot</h3>
+          <header className="mb-3 flex items-center gap-3 border-b border-slate-100 pb-2">
+            <Logo className="cp-logo--message-card" alt="" />
+            <h3 className="m-0 text-base font-bold tracking-tight text-cp-dust-700">Carepilot</h3>
           </header>
           {br.kind === "grocery" &&
           ((br.grocery && br.grocery.length > 0) || br.grocerySubstitutions) ? (
@@ -200,8 +207,9 @@ export function MessageCard(props: MessageCardProps) {
   return (
     <div className="flex justify-start">
       <article className="w-full max-w-[min(100%,40rem)] rounded-xl border border-cp-sage-800/15 bg-white/95 p-4 shadow-md shadow-cp-sage-900/5 sm:p-5">
-        <header className="mb-3 border-b border-cp-sage-900/10 pb-2">
-          <h3 className="text-sm font-bold tracking-tight text-cp-sage-900">✨ CarePilot</h3>
+        <header className="mb-3 flex items-center gap-3 border-b border-cp-sage-900/10 pb-2">
+          <Logo className="cp-logo--message-card" alt="" />
+          <h3 className="m-0 text-base font-bold tracking-tight text-cp-sage-900">Carepilot</h3>
         </header>
 
         {showNutritionLayout && intro ? (

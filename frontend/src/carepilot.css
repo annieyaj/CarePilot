@@ -202,6 +202,18 @@
   max-height: 56px;
 }
 
+/* Assistant message card header — full wordmark, tighter than default nav logo */
+.cp-logo--message-card {
+  min-width: 0;
+}
+
+.cp-logo--message-card .cp-logo__img {
+  height: auto;
+  max-height: 44px;
+  max-width: 44px;
+  width: auto;
+}
+
 @media (min-width: 640px) {
   .cp-logo--compact .cp-logo__img {
     height: 60px;
