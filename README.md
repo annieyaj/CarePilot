@@ -81,10 +81,10 @@ The backend can serve the built SPA from `frontend/dist` when `index.html` is pr
 
 ### Docker
 
-From the repo root (requires Docker):
+From the repo root (requires Docker). The image uses **workspace-scoped** `npm ci` so the build fits in small RAM limits (avoids exit 137 OOM):
 
 ```bash
-docker build -t carepilot .
+docker build -f Dockerfile.monorepo -t carepilot .
 docker run --rm -p 3001:3001 -e PORT=3001 carepilot
 ```
 
@@ -100,12 +100,14 @@ Open http://localhost:3001 — UI + `/api` on one port.
 
 **Option A — one service (simplest):** One Railway service from this repo: **build** `npm ci && npm run build`, **start** `npm start`. The server serves the SPA and `/api` on the same URL; no extra env for API routing.
 
-**Option B — separate frontend + backend services:** Use the **repo root** as the working directory for both services.
+**Option B — separate frontend + backend services:** Use the **repo root** as the working directory for both services. If **`npm ci` runs out of memory (exit 137)** on Railway, use **scoped installs** so each service skips the other workspace’s heavy deps:
 
 | Service | Build command | Start command |
 |--------|----------------|---------------|
-| **Backend** | `npm ci` (or include `npm run build` if you need the SPA files on the same container) | `npm start` |
-| **Frontend** | `npm ci && npm run build` | **`npm run start:frontend`** (runs `vite preview` on **`0.0.0.0:$PORT`**) |
+| **Backend** | `npm ci --workspace=carepilot-backend --no-audit --no-fund` | `npm start` |
+| **Frontend** | `npm ci --workspace=carepilot-frontend --no-audit --no-fund && npm run build -w carepilot-frontend` | **`npm run start:frontend`** (runs `vite preview` on **`0.0.0.0:$PORT`**) |
+
+The repo includes **`railway.toml`** so Railway uses **Nixpacks** instead of **Docker** by default (Dockerfile was causing OOM during full `npm ci`). Override the **Build command** in the dashboard with the rows above if the default install still fails.
 
 If the **frontend** service used **`npm start` at the repo root**, it would start the **backend**, not the UI — and the UI service would look “dead”. The frontend **must** use **`npm run start:frontend`** (or `npm run start -w frontend`) after a successful build.
 
