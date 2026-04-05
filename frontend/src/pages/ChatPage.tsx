@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/session";
 import { ChatWindow } from "../components/chat/ChatWindow";
 import { CloudTaskOutput } from "../components/chat/CloudTaskOutput";
 import { cloudStatusStillRunning } from "../components/chat/cloudStatus";
-import type { BrowserSession, CloudSessionView } from "../components/chat/journeyTypes";
+import type {
+  BrowserSession,
+  CloudSessionView,
+} from "../components/chat/journeyTypes";
 import { buildRecommendationActions } from "../components/chat/recommendationActions";
 import { titleForResourceLinks } from "../components/chat/resourceLinks";
 import { RecommendationPanel } from "../components/chat/RecommendationPanel";
@@ -16,7 +20,11 @@ function isCloudRunning(view: CloudSessionView): boolean {
   return cloudStatusStillRunning(view.status);
 }
 
-function cloudField<T>(o: Record<string, unknown>, camel: string, snake: string): T | undefined {
+function cloudField<T>(
+  o: Record<string, unknown>,
+  camel: string,
+  snake: string,
+): T | undefined {
   const v = o[camel] ?? o[snake];
   return v as T | undefined;
 }
@@ -32,13 +40,20 @@ function parseCloudSession(raw: Record<string, unknown>): CloudSessionView {
     id: String(cloudField(raw, "id", "id") ?? ""),
     status: String(cloudField(raw, "status", "status") ?? ""),
     ...(still !== undefined ? { stillRunning: still } : {}),
-    liveUrl: (cloudField<string | null>(raw, "liveUrl", "live_url") ?? null) || null,
+    liveUrl:
+      (cloudField<string | null>(raw, "liveUrl", "live_url") ?? null) || null,
     lastStepSummary:
-      (cloudField<string | null>(raw, "lastStepSummary", "last_step_summary") ?? null) || null,
+      (cloudField<string | null>(raw, "lastStepSummary", "last_step_summary") ??
+        null) ||
+      null,
     stepCount: Number(cloudField(raw, "stepCount", "step_count") ?? 0),
     output: cloudField(raw, "output", "output") ?? null,
     isTaskSuccessful:
-      (cloudField<boolean | null>(raw, "isTaskSuccessful", "is_task_successful") ?? null) ?? null,
+      cloudField<boolean | null>(
+        raw,
+        "isTaskSuccessful",
+        "is_task_successful",
+      ) ?? null,
   };
 }
 
@@ -50,7 +65,9 @@ function buildCloudRequestBody(
 ): string | null {
   const groceryId = "browseruse-grocery";
   const wantGrocery = checkedIds.has(groceryId);
-  const items = live.priceCheckItems?.filter((x) => typeof x === "string" && x.trim()) ?? [];
+  const items =
+    live.priceCheckItems?.filter((x) => typeof x === "string" && x.trim()) ??
+    [];
 
   const selectedDescriptions = (live.steps ?? [])
     .filter((s) => checkedIds.has(`step-${live.id}-${s.order}`))
@@ -120,9 +137,11 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. When you get a plan, check the steps you want in the sidebar and tap Run selected—a formatted summary of the browser run will appear in this chat. Grocery runs (when your plan lists shopping items) search Walmart, Vons, and Ralphs; steps about ER, hospitals, or urgent care can run a Maps-style search. Add BROWSER_USE_API_KEY on the server; sites may block automation.";
+  "Hi—I'm your CarePilot nutrition assistant. Ask about food for sleep, focus, digestion, muscles/joints, or immune support. Describe your symptoms or use your profile. When you get a plan, select actions in the sidebar and tap Run selected—a formatted browser summary appears in this chat. Grocery checks (when your plan lists shopping items) search Walmart, Vons, and Ralphs; steps about ER, hospitals, or urgent care can run a Maps-style search. Add BROWSER_USE_API_KEY on the server; sites may block automation.";
 
 export default function ChatPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([
     assistantMessageFromApi("welcome", WELCOME_TEXT, null),
   ]);
@@ -137,7 +156,9 @@ export default function ChatPage() {
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [cloudConfigured, setCloudConfigured] = useState(false);
-  const [cloudSession, setCloudSession] = useState<CloudSessionView | null>(null);
+  const [cloudSession, setCloudSession] = useState<CloudSessionView | null>(
+    null,
+  );
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -156,7 +177,9 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    const last = [...messagesRef.current].reverse().find((m) => m.role === "assistant");
+    const last = [...messagesRef.current]
+      .reverse()
+      .find((m) => m.role === "assistant");
     if (!last || last.role !== "assistant") return;
     const built = buildRecommendationActions(last.text, live, cloudConfigured);
     setActions(built);
@@ -164,15 +187,35 @@ export default function ChatPage() {
   }, [cloudConfigured, live]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+    listRef.current?.scrollTo({
+      top: listRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [messages]);
 
   useEffect(() => {
     void apiFetch("/api/journey/cloud-status")
       .then((r) => r.json())
-      .then((d: { configured?: boolean }) => setCloudConfigured(Boolean(d.configured)))
+      .then((d: { configured?: boolean }) =>
+        setCloudConfigured(Boolean(d.configured)),
+      )
       .catch(() => setCloudConfigured(false));
   }, []);
+
+  useEffect(() => {
+    const st = location.state as
+      | { shopRecipeDraft?: string }
+      | null
+      | undefined;
+    const draftText = st?.shopRecipeDraft;
+    if (typeof draftText !== "string" || !draftText.trim()) return;
+    setDraft(draftText.trim());
+    navigate(location.pathname, { replace: true, state: {} });
+    const raf = window.requestAnimationFrame(() => {
+      document.getElementById("cp-guardian-input")?.focus();
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [location.key, location.pathname, navigate]);
 
   useEffect(
     () => () => {
@@ -202,7 +245,9 @@ export default function ChatPage() {
       actionsRef.current,
     );
     if (!body) {
-      setCloudError("Select at least one step (or grocery prices, if listed), then tap Run selected.");
+      setCloudError(
+        "Select at least one step (or grocery prices, if listed), then tap Run selected.",
+      );
       return;
     }
     stopCloudPoll();
@@ -214,7 +259,10 @@ export default function ChatPage() {
         method: "POST",
         body,
       });
-      const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+      const data = (await res.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      > & {
         error?: string;
       };
       if (!res.ok) {
@@ -232,8 +280,13 @@ export default function ChatPage() {
         return;
       }
       const pollOnce = async () => {
-        const r = await apiFetch(`/api/journey/cloud-task/${encodeURIComponent(sessionId)}`);
-        const d = (await r.json().catch(() => ({}))) as Record<string, unknown> & {
+        const r = await apiFetch(
+          `/api/journey/cloud-task/${encodeURIComponent(sessionId)}`,
+        );
+        const d = (await r.json().catch(() => ({}))) as Record<
+          string,
+          unknown
+        > & {
           error?: string;
         };
         if (!r.ok) {
@@ -294,20 +347,28 @@ export default function ChatPage() {
         throw new Error((data as { error?: string }).error ?? res.statusText);
       }
       const assistantText = (data as { assistantText?: string }).assistantText;
-      const browserSession = (data as { browserSession?: BrowserSession }).browserSession;
+      const browserSession = (data as { browserSession?: BrowserSession })
+        .browserSession;
       const reply = assistantText ?? "No reply from planner.";
       const asst = assistantMessageFromApi(makeId(), reply, browserSession);
       setMessages((m) => [...m, asst]);
       if (browserSession) setLive(browserSession);
       else setLive(null);
-      const nextActions = buildRecommendationActions(reply, browserSession ?? null, cloudConfigured);
+      const nextActions = buildRecommendationActions(
+        reply,
+        browserSession ?? null,
+        cloudConfigured,
+      );
       setActions(nextActions);
       setCheckedIds(new Set());
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Request failed";
       setLiveError(msg);
       const errText = `Could not reach the planner (${msg}). Is the API running on port 3001?`;
-      setMessages((m) => [...m, assistantMessageFromApi(makeId(), errText, null)]);
+      setMessages((m) => [
+        ...m,
+        assistantMessageFromApi(makeId(), errText, null),
+      ]);
       setActions([]);
       setCheckedIds(new Set());
     } finally {
@@ -324,12 +385,17 @@ export default function ChatPage() {
       {cloudConfigured ? (
         <span className="text-slate-500">Cloud ready</span>
       ) : (
-        <span className="text-amber-700">Add BROWSER_USE_API_KEY for Cloud</span>
+        <span className="text-amber-700">
+          Add BROWSER_USE_API_KEY for Cloud
+        </span>
       )}
     </p>
   ) : liveLoading ? (
     <p className="flex items-center gap-2 text-slate-600">
-      <span className="size-2 animate-pulse rounded-full bg-sky-500" aria-hidden />
+      <span
+        className="size-2 animate-pulse rounded-full bg-sky-500"
+        aria-hidden
+      />
       Planning…
     </p>
   ) : (
@@ -337,7 +403,7 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-slate-100 lg:flex-row">
+    <div className="cp-chat-page-bg flex min-h-0 flex-1 flex-col lg:flex-row">
       <ChatWindow
         className="lg:min-w-0 lg:flex-[3] lg:max-w-none"
         listRef={listRef}
@@ -351,7 +417,9 @@ export default function ChatPage() {
         onCheckGroceryPrices={
           cloudConfigured &&
           live &&
-          (live.priceCheckItems?.filter((x) => typeof x === "string" && x.trim()).length ?? 0) > 0
+          (live.priceCheckItems?.filter(
+            (x) => typeof x === "string" && x.trim(),
+          ).length ?? 0) > 0
             ? () => void startCloudTask({ forceIncludeGrocery: true })
             : undefined
         }
@@ -366,7 +434,12 @@ export default function ChatPage() {
         runDisabled={
           !live ||
           !cloudConfigured ||
-          !buildCloudRequestBody(live, lastPatientMessageRef.current, checkedIds, actions)
+          !buildCloudRequestBody(
+            live,
+            lastPatientMessageRef.current,
+            checkedIds,
+            actions,
+          )
         }
         liveSummary={liveSummary}
       >
@@ -384,7 +457,10 @@ export default function ChatPage() {
           </div>
         ) : null}
         {liveError ? (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          <p
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+            role="alert"
+          >
             {liveError}
           </p>
         ) : null}
@@ -414,26 +490,39 @@ export default function ChatPage() {
           </div>
         ) : null}
         {cloudError ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+          <p
+            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            role="alert"
+          >
             Cloud: {cloudError}
           </p>
         ) : null}
         {cloudSession ? (
           <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
             <p className="text-xs text-slate-600">
-              Task <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">{cloudSession.id.slice(0, 8)}…</code>
+              Task{" "}
+              <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">
+                {cloudSession.id.slice(0, 8)}…
+              </code>
               {" · "}
-              <span className="font-medium text-slate-800">{cloudSession.status}</span>
+              <span className="font-medium text-slate-800">
+                {cloudSession.status}
+              </span>
               {` · ${cloudSession.stepCount} step${cloudSession.stepCount === 1 ? "" : "s"}`}
               {isCloudRunning(cloudSession) ? (
                 <span className="ml-1.5 inline-flex items-center gap-1 text-sky-700">
-                  <span className="size-1.5 animate-pulse rounded-full bg-sky-500" aria-hidden />
+                  <span
+                    className="size-1.5 animate-pulse rounded-full bg-sky-500"
+                    aria-hidden
+                  />
                   running
                 </span>
               ) : null}
             </p>
             {cloudSession.lastStepSummary ? (
-              <p className="mt-2 text-xs text-slate-600">{cloudSession.lastStepSummary}</p>
+              <p className="mt-2 text-xs text-slate-600">
+                {cloudSession.lastStepSummary}
+              </p>
             ) : null}
             {cloudSession.liveUrl ? (
               <>
@@ -458,7 +547,10 @@ export default function ChatPage() {
                 A formatted copy is also in the chat thread above.
               </p>
             ) : null}
-            <CloudTaskOutput output={cloudSession.output} status={cloudSession.status} />
+            <CloudTaskOutput
+              output={cloudSession.output}
+              status={cloudSession.status}
+            />
           </div>
         ) : null}
       </RecommendationPanel>

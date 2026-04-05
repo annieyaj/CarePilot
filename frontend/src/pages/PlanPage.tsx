@@ -1,20 +1,101 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/session";
+
+type MealSlot = {
+  text: string;
+  labels: string[];
+};
 
 type MealPlan = {
   date: string;
   summary: string;
   concerns: string[];
+  priorityOrder?: string[];
+  topFoods?: string[];
+  foodsToLimit?: string[];
   meals: {
-    breakfast: string;
-    lunch: string;
-    dinner: string;
-    snacks: string[];
+    breakfast: MealSlot | string;
+    lunch: MealSlot | string;
+    dinner: MealSlot | string;
+    snacks: (MealSlot | string)[];
   };
   hydration: string;
   disclaimer: string;
 };
+
+function legacyLabelsFromSentence(s: string): string[] {
+  return s
+    .split(/[,;]/)
+    .map((x) => x.replace(/^[\s.—]+|[\s.—]+$/g, "").trim())
+    .filter((x) => x.length > 2)
+    .slice(0, 12);
+}
+
+function normalizeMealSlot(raw: MealSlot | string): MealSlot {
+  if (raw != null && typeof raw === "object" && "text" in raw) {
+    const o = raw as MealSlot;
+    const labels = Array.isArray(o.labels) ? o.labels : [];
+    return { text: String(o.text ?? ""), labels };
+  }
+  const text = String(raw ?? "");
+  return { text, labels: legacyLabelsFromSentence(text) };
+}
+
+function buildShopRecipePrompt(mealTitle: string, labels: string[], recipeSummary: string): string {
+  const ingredients =
+    labels.length > 0 ? labels.join(", ") : recipeSummary.trim().slice(0, 280) || "general pantry items";
+  return `From my meal plan (${mealTitle}), I need to shop for these ingredients: ${ingredients}. Please give me a concise grocery list and any simple substitutions if something is unavailable.`;
+}
+
+function MealShopCard({
+  mealTitle,
+  slot,
+  ariaLabel,
+}: {
+  mealTitle: string;
+  slot: MealSlot | string;
+  ariaLabel: string;
+}) {
+  const navigate = useNavigate();
+  const { text, labels } = normalizeMealSlot(slot);
+
+  function goShopRecipe() {
+    navigate("/chat", {
+      state: { shopRecipeDraft: buildShopRecipePrompt(mealTitle, labels, text) },
+    });
+  }
+
+  return (
+    <article className="cp-meal cp-meal--interactive">
+      <div className="cp-meal__inner">
+        <h2 className="cp-meal__label">{mealTitle}</h2>
+        {labels.length > 0 ? (
+          <ul className="cp-food-labels cp-food-labels--meal" aria-label={ariaLabel}>
+            {labels.map((f) => (
+              <li key={f} className="cp-food-labels__item">
+                <span className="cp-food-label">{f}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {text ? <p className="cp-meal__caption">{text}</p> : null}
+        <button
+          type="button"
+          className="cp-meal__shop-fallback"
+          onClick={goShopRecipe}
+        >
+          Shop recipe
+        </button>
+      </div>
+      <div className="cp-meal__hover-layer">
+        <button type="button" className="cp-btn cp-btn--primary cp-meal__shop-btn" onClick={goShopRecipe}>
+          Shop recipe
+        </button>
+      </div>
+    </article>
+  );
+}
 
 export default function PlanPage() {
   const [plan, setPlan] = useState<MealPlan | null>(null);
@@ -61,38 +142,75 @@ export default function PlanPage() {
     );
   }
 
+  const priority = plan.priorityOrder ?? plan.concerns;
+  const snacks = plan.meals.snacks.map((s) => normalizeMealSlot(s));
+
   return (
     <div className="cp-page">
       <header className="cp-page__head">
         <h1 className="cp-page__title">Daily meal plan</h1>
         <p className="cp-page__sub">
-          For {plan.date}. Areas you rated <strong>3+</strong> on health input shape these suggestions.
+          For {plan.date}. Uses your <strong>body metrics</strong> (age, BMI from height/weight) and{" "}
+          <strong>every subhealth rating 1–5</strong> in the scorer; areas at <strong>3+</strong> are highlighted
+          below. Hover a meal for <strong>Shop recipe</strong> to open chat with ingredients ready to send.
         </p>
       </header>
 
       <p className="cp-plan__summary">{plan.summary}</p>
 
-      <div className="cp-plan__grid">
-        <article className="cp-meal">
-          <h2 className="cp-meal__label">Breakfast</h2>
-          <p className="cp-meal__text">{plan.meals.breakfast}</p>
-        </article>
-        <article className="cp-meal">
-          <h2 className="cp-meal__label">Lunch</h2>
-          <p className="cp-meal__text">{plan.meals.lunch}</p>
-        </article>
-        <article className="cp-meal">
-          <h2 className="cp-meal__label">Dinner</h2>
-          <p className="cp-meal__text">{plan.meals.dinner}</p>
-        </article>
-        <article className="cp-meal">
-          <h2 className="cp-meal__label">Snacks</h2>
-          <ul className="cp-meal__list">
-            {plan.meals.snacks.map((s) => (
-              <li key={s}>{s}</li>
+      {priority.length > 0 ? (
+        <section className="cp-card cp-card--tight">
+          <h2 className="cp-card__title">Active focus (priority)</h2>
+          <ol className="cp-plan__priority">
+            {priority.map((c) => (
+              <li key={c}>{c.replace(/_/g, " ")}</li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      {plan.topFoods && plan.topFoods.length > 0 ? (
+        <section className="cp-card cp-card--tight" aria-labelledby="plan-foods-heading">
+          <h2 id="plan-foods-heading" className="cp-card__title">
+            Ingredients emphasized today
+          </h2>
+          <ul className="cp-food-labels" aria-label="Foods to emphasize">
+            {plan.topFoods.map((f) => (
+              <li key={f} className="cp-food-labels__item">
+                <span className="cp-food-label">{f}</span>
+              </li>
             ))}
           </ul>
-        </article>
+        </section>
+      ) : null}
+
+      {plan.foodsToLimit && plan.foodsToLimit.length > 0 ? (
+        <section className="cp-card cp-card--tight" aria-labelledby="plan-limit-heading">
+          <h2 id="plan-limit-heading" className="cp-card__title">
+            Patterns to ease up on
+          </h2>
+          <ul className="cp-food-labels" aria-label="Patterns to limit">
+            {plan.foodsToLimit.map((a) => (
+              <li key={a} className="cp-food-labels__item">
+                <span className="cp-food-label cp-food-label--muted">{a}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <div className="cp-plan__grid cp-plan__grid--shop">
+        <MealShopCard mealTitle="Breakfast" slot={plan.meals.breakfast} ariaLabel="Breakfast foods" />
+        <MealShopCard mealTitle="Lunch" slot={plan.meals.lunch} ariaLabel="Lunch foods" />
+        <MealShopCard mealTitle="Dinner" slot={plan.meals.dinner} ariaLabel="Dinner foods" />
+        {snacks.map((snack, i) => (
+          <MealShopCard
+            key={`${snack.text}-${i}`}
+            mealTitle={`Snack ${i + 1}`}
+            slot={snack}
+            ariaLabel={`Snack ${i + 1} foods`}
+          />
+        ))}
       </div>
 
       <section className="cp-card cp-card--tight">
