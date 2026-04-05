@@ -89,18 +89,25 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.post("/api/auth/login", (req, res) => {
-  const username = req.body?.username;
-  const email = req.body?.email;
-  if (typeof username !== "string" || !username.trim()) {
-    res.status(400).json({ error: "username (non-empty string) required" });
+  const rawU = typeof req.body?.username === "string" ? req.body.username.trim() : "";
+  const rawE = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+  if (!rawU && !rawE) {
+    res.status(400).json({ error: "username or email required" });
     return;
   }
-  if (typeof email !== "string" || !email.trim()) {
-    res.status(400).json({ error: "email (non-empty string) required" });
-    return;
+  let username = rawU;
+  let email = rawE;
+  if (!username && email) {
+    username = email.includes("@") ? email.split("@")[0] : email;
+  }
+  if (!email && username) {
+    email = `${username.replace(/\s+/g, "_")}@local.demo`;
+  }
+  if (email && !email.includes("@")) {
+    email = `${email.replace(/\s+/g, "_")}@local.demo`;
   }
   const sessionId = createSession(username, email);
-  res.json({ sessionId, username: username.trim(), email: email.trim() });
+  res.json({ sessionId, username, email });
 });
 
 app.get("/api/me", (req, res) => {

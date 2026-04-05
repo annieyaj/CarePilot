@@ -1637,6 +1637,18 @@
   text-decoration: underline;
 }
 
+.cp-login__optional {
+  font-weight: 500;
+  font-size: 0.72em;
+  color: var(--cp-text-placeholder);
+}
+
+.cp-login__code {
+  font-size: 0.92em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--cp-text-muted);
+}
+
 .cp-login__demo-note {
   margin: 1.15rem 0 0;
   font-size: 0.7rem;

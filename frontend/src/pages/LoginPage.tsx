@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { LoginGeneFoodCanvas } from "../components/LoginGeneFoodCanvas";
 import { Logo } from "../components/Logo";
+import { normalizeCredentials } from "../api/session";
 import { useSession } from "../context/SessionContext";
 
 export default function LoginPage() {
@@ -28,7 +29,8 @@ export default function LoginPage() {
     setError(null);
     setBusy(true);
     try {
-      await login(username.trim(), email.trim());
+      const { username: u, email: em } = normalizeCredentials(username, email);
+      await login(u, em);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -84,14 +86,14 @@ export default function LoginPage() {
 
           <p className="cp-login__lede">
             Nutrition and habits meet your profile—genes load the map, whole
-            foods fuel the path. Sign in with username and email (demo: no
-            password).
+            foods fuel the path. Enter a username, an email, or both (demo: no
+            password; any value is accepted).
           </p>
 
           <form className="cp-login__form" onSubmit={(e) => void onSubmit(e)}>
             <div className="cp-login__field">
               <label className="cp-login__label" htmlFor="login-username">
-                Username
+                Username <span className="cp-login__optional">(optional if email set)</span>
               </label>
               <input
                 id="login-username"
@@ -101,23 +103,21 @@ export default function LoginPage() {
                 placeholder="Enter username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                required
               />
             </div>
             <div className="cp-login__field">
               <label className="cp-login__label" htmlFor="login-email">
-                Email
+                Email <span className="cp-login__optional">(optional if username set)</span>
               </label>
               <input
                 id="login-email"
                 className="cp-login__input"
-                type="email"
+                type="text"
                 name="email"
                 autoComplete="email"
-                placeholder="Enter email"
+                placeholder="Enter email or any label"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
             </div>
 
@@ -137,7 +137,7 @@ export default function LoginPage() {
 
             <div className="cp-login__footer-row">
               <span className="cp-login__hint">
-                Username + email only—no password in this demo.
+                At least one field—no password in this demo.
               </span>
               <span className="cp-login__first-time">
                 New?{" "}
@@ -172,8 +172,11 @@ export default function LoginPage() {
           </form>
 
           <p className="cp-login__demo-note">
-            Demo: sessions live in server memory and clear when the API
-            restarts.
+            Demo: with a running API, sessions live in server memory until it
+            restarts. For static deploys, set{" "}
+            <code className="cp-login__code">VITE_FAKE_LOGIN=true</code> or{" "}
+            <code className="cp-login__code">VITE_FAKE_LOGIN=auto</code>{" "}
+            (try API, then browser-only if unreachable).
           </p>
         </div>
       </div>
