@@ -170,9 +170,16 @@
   align-items: center;
   justify-content: flex-end;
   padding: 2.5rem 3rem 3rem;
+  background-color: #f0f7f9;
+  background-image: url("/images/home-hero.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: right center;
 }
 
 .cp-cover__panel {
+  position: relative;
+  z-index: 1;
   max-width: 520px;
   text-align: left;
 }
@@ -1350,6 +1357,8 @@
   .cp-cover {
     justify-content: flex-start;
     padding: 1.5rem;
+    background-position: 30% center;
+    min-height: min(70vh, 28rem);
   }
 
   .cp-journey {
