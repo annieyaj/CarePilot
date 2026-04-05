@@ -95,6 +95,8 @@ docker build -f Dockerfile.backend -t carepilot-api .
 docker run --rm -p 3001:3001 -e PORT=3001 carepilot-api
 ```
 
+**Frontend Start command:** `npm run start:frontend` is defined on the **repo root** `package.json`. If Railway **Settings → Source → Root Directory** is set to **`frontend`**, npm only sees `frontend/package.json` — use repo **root** (`.` or leave empty) for monorepo installs, **or** keep `frontend` as root and rely on the same script name in `frontend/package.json` (also defined there). **Watch paths** can still be **`/frontend/**`** without changing the root directory.
+
 On **Railway**, open **each service → Settings → Build** and set **Dockerfile path** explicitly:
 
 | Service | Dockerfile path |
