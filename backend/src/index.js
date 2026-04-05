@@ -35,7 +35,8 @@ app.use(express.json());
 function sessionIdFromReq(req) {
   const h = req.headers["x-session-id"];
   if (typeof h === "string" && h.trim()) return h.trim();
-  if (typeof req.body?.sessionId === "string" && req.body.sessionId.trim()) return req.body.sessionId.trim();
+  if (typeof req.body?.sessionId === "string" && req.body.sessionId.trim())
+    return req.body.sessionId.trim();
   return null;
 }
 
@@ -80,11 +81,18 @@ app.put("/api/me/profile", (req, res) => {
     return;
   }
   const b = req.body ?? {};
-  const age = typeof b.age === "number" && Number.isFinite(b.age) ? Math.max(0, Math.min(130, b.age)) : null;
+  const age =
+    typeof b.age === "number" && Number.isFinite(b.age)
+      ? Math.max(0, Math.min(130, b.age))
+      : null;
   const heightCm =
-    typeof b.heightCm === "number" && Number.isFinite(b.heightCm) ? Math.max(30, Math.min(260, b.heightCm)) : null;
+    typeof b.heightCm === "number" && Number.isFinite(b.heightCm)
+      ? Math.max(30, Math.min(260, b.heightCm))
+      : null;
   const weightKg =
-    typeof b.weightKg === "number" && Number.isFinite(b.weightKg) ? Math.max(1, Math.min(400, b.weightKg)) : null;
+    typeof b.weightKg === "number" && Number.isFinite(b.weightKg)
+      ? Math.max(1, Math.min(400, b.weightKg))
+      : null;
   let bmi = typeof b.bmi === "number" && Number.isFinite(b.bmi) ? b.bmi : null;
   const computed = computeBmi(heightCm, weightKg);
   if (computed != null) bmi = computed;
@@ -145,8 +153,11 @@ app.post("/api/journey/cloud-task", async (req, res) => {
   if (g && typeof g === "object") {
     task = buildGroceryPriceTask({
       userMessage: typeof g.userMessage === "string" ? g.userMessage : "",
-      priceCheckItems: Array.isArray(g.priceCheckItems) ? g.priceCheckItems : [],
-      nutritionSummary: typeof g.nutritionSummary === "string" ? g.nutritionSummary : "",
+      priceCheckItems: Array.isArray(g.priceCheckItems)
+        ? g.priceCheckItems
+        : [],
+      nutritionSummary:
+        typeof g.nutritionSummary === "string" ? g.nutritionSummary : "",
     });
   } else if (typeof req.body?.task === "string" && req.body.task.trim()) {
     task = req.body.task.trim();
@@ -270,7 +281,10 @@ server.on("error", (err) => {
       `CarePilot API: port ${PORT} is already in use. Stop the other server on that port (e.g. \`lsof -i :${PORT}\` then kill the PID), or set PORT in backend/.env to a free port and match frontend/vite proxy if you change it.`,
     );
   } else {
-    console.error("CarePilot API: server failed to start:", err?.message ?? err);
+    console.error(
+      "CarePilot API: server failed to start:",
+      err?.message ?? err,
+    );
   }
   process.exit(1);
 });
