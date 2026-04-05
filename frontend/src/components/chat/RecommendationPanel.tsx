@@ -11,6 +11,8 @@ type RecommendationPanelProps = {
   runLoading: boolean;
   runDisabled: boolean;
   liveSummary?: ReactNode;
+  /** Shown at the top of the scroll area (e.g. Location & Maps) so it stays easy to find. */
+  sidebarTop?: ReactNode;
   children?: ReactNode;
 };
 
@@ -22,6 +24,7 @@ export function RecommendationPanel({
   runLoading,
   runDisabled,
   liveSummary,
+  sidebarTop,
   children,
 }: RecommendationPanelProps) {
   return (
@@ -54,6 +57,7 @@ export function RecommendationPanel({
       </div>
 
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-4 sm:px-5">
+        {sidebarTop ? <div className="pb-1">{sidebarTop}</div> : null}
         {actions.length === 0 ? (
           <p className="rounded-xl border border-dashed border-slate-300 bg-white/60 px-3 py-6 text-center text-sm text-slate-500">
             Send a message to get suggested steps here. Grocery price checks appear only when your

@@ -10,10 +10,16 @@ import type {
 } from "../components/chat/journeyTypes";
 import { buildRecommendationActions } from "../components/chat/recommendationActions";
 import { titleForResourceLinks } from "../components/chat/resourceLinks";
+import { MapsLocationPanel } from "../components/chat/MapsLocationPanel";
+import type { CareIntent } from "../components/chat/MapsLocationPanel";
 import { RecommendationPanel } from "../components/chat/RecommendationPanel";
 import { browserRunPayloadFromOutput } from "../components/chat/cloudTaskFormat";
 import type { ChatMessage, RecommendationAction } from "../components/chat/types";
-import { assistantMessageFromApi, assistantMessageFromBrowserRun } from "../components/chat/types";
+import {
+  assistantMessageFromApi,
+  assistantMessageFromBrowserRun,
+  assistantMessageFromMaps,
+} from "../components/chat/types";
 
 function isCloudRunning(view: CloudSessionView): boolean {
   if (typeof view.stillRunning === "boolean") return view.stillRunning;
@@ -62,6 +68,7 @@ function buildCloudRequestBody(
   lastUserMessage: string,
   checkedIds: Set<string>,
   sidebarActions: RecommendationAction[],
+  nearbyStoreHints: string[],
 ): string | null {
   const groceryId = "browseruse-grocery";
   const wantGrocery = checkedIds.has(groceryId);
@@ -98,13 +105,14 @@ function buildCloudRequestBody(
     ]
       .filter(Boolean)
       .join("\n");
-    return JSON.stringify({
-      grocery: {
-        userMessage: lastUserMessage,
-        priceCheckItems: items,
-        nutritionSummary,
-      },
-    });
+    const grocery: Record<string, unknown> = {
+      userMessage: lastUserMessage,
+      priceCheckItems: items,
+      nutritionSummary,
+    };
+    const hints = nearbyStoreHints.map((x) => x.trim()).filter(Boolean).slice(0, 12);
+    if (hints.length) grocery.nearbyStoreHints = hints;
+    return JSON.stringify({ grocery });
   }
 
   if (careHint) {
@@ -137,7 +145,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi—I'm your CarePilot nutrition assistant. Ask about food for sleep, focus, digestion, muscles/joints, or immune support. Describe your symptoms or use your profile. When you get a plan, select actions in the sidebar and tap Run selected—a formatted browser summary appears in this chat. Grocery checks (when your plan lists shopping items) search Walmart, Vons, and Ralphs; steps about ER, hospitals, or urgent care can run a Maps-style search. Add BROWSER_USE_API_KEY on the server; sites may block automation.";
+  "Hi—I'm your CarePilot nutrition assistant. Ask about food for sleep, focus, digestion, muscles/joints, or immune support. Describe your symptoms or use your profile. When you get a plan, select actions in the sidebar and tap Run selected—a formatted browser summary appears in this chat. With GOOGLE_MAPS_API_KEY on the server, you can find nearby grocery stores and care facilities directly (sidebar). Grocery price checks still use Browser Use on retailer sites; we pass nearby store names from Maps to focus those runs. Add BROWSER_USE_API_KEY for cloud browser tasks.";
 
 export default function ChatPage() {
   const location = useLocation();
@@ -161,6 +169,17 @@ export default function ChatPage() {
   );
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
+  const [mapsConfigured, setMapsConfigured] = useState(false);
+  const [mapsLoading, setMapsLoading] = useState(false);
+  const [mapsError, setMapsError] = useState<string | null>(null);
+  const [userLatLng, setUserLatLng] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  const [addressInput, setAddressInput] = useState("");
+  /** Store names from last Maps grocery search — passed to Browser Use price tasks. */
+  const [nearbyGroceryPlaces, setNearbyGroceryPlaces] = useState<Array<{ name: string }>>([]);
+  const [groceryMapCount, setGroceryMapCount] = useState(0);
+  const [careMapCount, setCareMapCount] = useState(0);
+  const [careIntent, setCareIntent] = useState<CareIntent>("emergency");
   const listRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -203,6 +222,13 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    void apiFetch("/api/journey/places-status")
+      .then((r) => r.json())
+      .then((d: { configured?: boolean }) => setMapsConfigured(Boolean(d.configured)))
+      .catch(() => setMapsConfigured(false));
+  }, []);
+
+  useEffect(() => {
     const st = location.state as
       | { shopRecipeDraft?: string }
       | null
@@ -234,6 +260,185 @@ export default function ChatPage() {
     }
   }
 
+  function nearbyHintsForCloud(): string[] {
+    return nearbyGroceryPlaces.map((p) => p.name.trim()).filter(Boolean);
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setMapsError("Location is not available in this browser.");
+      return;
+    }
+    setMapsLoading(true);
+    setMapsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setUserLatLng({ lat, lng });
+        setLocationLabel(
+          `Near ${lat.toFixed(4)}, ${lng.toFixed(4)} (browser location)`,
+        );
+        setMapsLoading(false);
+      },
+      (err) => {
+        setMapsError(err.message || "Could not read location");
+        setMapsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 60_000 },
+    );
+  }
+
+  async function searchAddressToCoords() {
+    const q = addressInput.trim();
+    if (!q) return;
+    setMapsLoading(true);
+    setMapsError(null);
+    try {
+      const res = await apiFetch("/api/places/geocode", {
+        method: "POST",
+        body: JSON.stringify({ address: q }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        lat?: number;
+        lng?: number;
+        formattedAddress?: string;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(data.error ?? res.statusText);
+      if (
+        typeof data.lat !== "number" ||
+        typeof data.lng !== "number" ||
+        !Number.isFinite(data.lat) ||
+        !Number.isFinite(data.lng)
+      ) {
+        throw new Error("No coordinates returned");
+      }
+      setUserLatLng({ lat: data.lat, lng: data.lng });
+      setLocationLabel(data.formattedAddress ?? q);
+    } catch (e) {
+      setMapsError(e instanceof Error ? e.message : "Geocoding failed");
+    } finally {
+      setMapsLoading(false);
+    }
+  }
+
+  async function findNearbyGroceryMaps() {
+    if (!userLatLng) {
+      setMapsError("Set your location first (button or address search).");
+      return;
+    }
+    setMapsLoading(true);
+    setMapsError(null);
+    try {
+      const res = await apiFetch("/api/places/nearby-grocery", {
+        method: "POST",
+        body: JSON.stringify({
+          lat: userLatLng.lat,
+          lng: userLatLng.lng,
+          radiusMeters: 10000,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        places?: Array<{
+          name: string;
+          address: string;
+          mapsUrl: string;
+          rating?: number;
+          distanceMeters?: number | null;
+        }>;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(data.error ?? res.statusText);
+      const places = data.places ?? [];
+      setNearbyGroceryPlaces(places.map((p) => ({ name: p.name })));
+      setGroceryMapCount(places.length);
+      const mapsPlaces = places.map((p) => ({
+        name: p.name,
+        address: p.address || undefined,
+        mapsUrl: p.mapsUrl,
+        rating: p.rating != null ? String(p.rating) : undefined,
+        distanceMeters: p.distanceMeters ?? undefined,
+      }));
+      setMessages((m) => [
+        ...m,
+        assistantMessageFromMaps(makeId(), {
+          kind: "maps",
+          title: "Nearby grocery stores",
+          subtitle:
+            "Approximate distance from your search point. Open Maps to verify hours and directions.",
+          mapsContext: "grocery",
+          mapsPlaces,
+        }),
+      ]);
+    } catch (e) {
+      setMapsError(e instanceof Error ? e.message : "Maps request failed");
+    } finally {
+      setMapsLoading(false);
+    }
+  }
+
+  async function findCareFacilitiesMaps() {
+    if (!userLatLng) {
+      setMapsError("Set your location first (button or address search).");
+      return;
+    }
+    setMapsLoading(true);
+    setMapsError(null);
+    const titles: Record<CareIntent, string> = {
+      emergency: "Emergency room (nearby)",
+      urgent: "Urgent care (nearby)",
+      hospital: "Hospitals (nearby)",
+    };
+    try {
+      const res = await apiFetch("/api/places/care-facilities", {
+        method: "POST",
+        body: JSON.stringify({
+          lat: userLatLng.lat,
+          lng: userLatLng.lng,
+          intent: careIntent,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        places?: Array<{
+          name: string;
+          address: string;
+          mapsUrl: string;
+          rating?: number;
+          distanceMeters?: number | null;
+        }>;
+        disclaimer?: string;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(data.error ?? res.statusText);
+      const places = data.places ?? [];
+      setCareMapCount(places.length);
+      const mapsPlaces = places.map((p) => ({
+        name: p.name,
+        address: p.address || undefined,
+        mapsUrl: p.mapsUrl,
+        rating: p.rating != null ? String(p.rating) : undefined,
+        distanceMeters: p.distanceMeters ?? undefined,
+      }));
+      setMessages((m) => [
+        ...m,
+        assistantMessageFromMaps(makeId(), {
+          kind: "maps",
+          title: titles[careIntent],
+          subtitle:
+            "Public listings only—not medical advice. For emergencies call 911 (US).",
+          mapsContext: "care",
+          mapsPlaces,
+          mapsDisclaimer: data.disclaimer,
+        }),
+      ]);
+    } catch (e) {
+      setMapsError(e instanceof Error ? e.message : "Maps request failed");
+    } finally {
+      setMapsLoading(false);
+    }
+  }
+
   async function startCloudTask(options?: { forceIncludeGrocery?: boolean }) {
     if (!live) return;
     const ids = new Set(checkedIdsRef.current);
@@ -243,6 +448,7 @@ export default function ChatPage() {
       lastPatientMessageRef.current,
       ids,
       actionsRef.current,
+      nearbyHintsForCloud(),
     );
     if (!body) {
       setCloudError(
@@ -439,9 +645,28 @@ export default function ChatPage() {
             lastPatientMessageRef.current,
             checkedIds,
             actions,
+            nearbyHintsForCloud(),
           )
         }
         liveSummary={liveSummary}
+        sidebarTop={
+          <MapsLocationPanel
+            configured={mapsConfigured}
+            loading={mapsLoading}
+            error={mapsError}
+            locationLabel={locationLabel}
+            onUseMyLocation={() => useMyLocation()}
+            address={addressInput}
+            onAddressChange={setAddressInput}
+            onSearchAddress={() => void searchAddressToCoords()}
+            careIntent={careIntent}
+            onCareIntentChange={setCareIntent}
+            onFindGrocery={() => void findNearbyGroceryMaps()}
+            onFindCare={() => void findCareFacilitiesMaps()}
+            groceryResultCount={groceryMapCount}
+            careResultCount={careMapCount}
+          />
+        }
       >
         {cloudActive && !cloudSession ? (
           <div

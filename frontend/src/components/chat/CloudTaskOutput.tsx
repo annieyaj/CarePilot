@@ -7,7 +7,18 @@ export function CloudTaskOutput({ output, status }: { output: unknown; status: s
   if (output == null || cloudStatusStillRunning(status)) return null;
   const parsed = parseGroceryCloudOutput(output);
   if (parsed) {
-    return <GroceryPriceBlock items={parsed.items} />;
+    return (
+      <div className="mt-2 space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          Store prices
+        </p>
+        <GroceryPriceBlock
+          items={parsed.items}
+          substitutionsNote={parsed.substitutionsNote}
+          density="compact"
+        />
+      </div>
+    );
   }
   const text =
     typeof output === "string" ? output : JSON.stringify(output, null, 2);

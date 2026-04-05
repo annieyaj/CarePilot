@@ -57,11 +57,11 @@ function lineToBlocks(lines: string[]): Block[] {
       continue;
     }
 
-    if (/^[-*•]\s+/.test(t)) {
+    if (/^[-*•]\s*/.test(t)) {
       const items: string[] = [];
       while (i < lines.length) {
         const L = lines[i].trim();
-        const bullet = L.match(/^[-*•]\s+(.+)$/);
+        const bullet = L.match(/^[-*•]\s*(.+)$/);
         if (bullet) {
           items.push(bullet[1]);
           i += 1;
@@ -71,11 +71,11 @@ function lineToBlocks(lines: string[]): Block[] {
       continue;
     }
 
-    if (/^\d+\.\s+/.test(t)) {
+    if (/^\d+[\).]\s+/.test(t)) {
       const items: string[] = [];
       while (i < lines.length) {
         const L = lines[i].trim();
-        const num = L.match(/^\d+\.\s+(.+)$/);
+        const num = L.match(/^\d+[\).]\s+(.+)$/);
         if (num) {
           items.push(num[1]);
           i += 1;
@@ -100,9 +100,23 @@ function looksLikeJson(s: string): boolean {
  * Readable, on-brand rendering for agent long-form text (markdown-like).
  * Avoids terminal-style dark blocks.
  */
-export function AgentTextProse({ text, className = "" }: { text: string; className?: string }) {
+export function AgentTextProse({
+  text,
+  className = "",
+  variant = "default",
+}: {
+  text: string;
+  className?: string;
+  /** Larger type and spacing for main chat assistant replies. */
+  variant?: "default" | "assistant";
+}) {
   const trimmed = text.trim();
   if (!trimmed) return null;
+
+  const bodyTone =
+    variant === "assistant"
+      ? "space-y-4 text-[15px] leading-[1.65] text-slate-700 [&_strong]:text-slate-900 [&_ul]:my-1 [&_ol]:my-1"
+      : "space-y-3 text-sm leading-relaxed text-slate-700 [&_strong]:text-slate-900";
 
   if (looksLikeJson(trimmed)) {
     try {
@@ -129,9 +143,7 @@ export function AgentTextProse({ text, className = "" }: { text: string; classNa
   const blocks = lineToBlocks(lines);
 
   return (
-    <div
-      className={`space-y-3 text-sm leading-relaxed text-slate-700 [&_strong]:text-slate-900 ${className}`}
-    >
+    <div className={`${bodyTone} ${className}`}>
       {blocks.map((b, idx) => {
         if (b.type === "blank") {
           return <div key={`b-${idx}`} className="h-1" />;
@@ -140,7 +152,9 @@ export function AgentTextProse({ text, className = "" }: { text: string; classNa
           return (
             <h3
               key={`h2-${idx}`}
-              className="border-b border-slate-100 pb-1.5 text-base font-semibold tracking-tight text-slate-900"
+              className={`border-b border-slate-100 pb-1.5 font-semibold tracking-tight text-slate-900 ${
+                variant === "assistant" ? "text-lg" : "text-base"
+              }`}
             >
               {inlineBold(b.text)}
             </h3>
@@ -148,14 +162,17 @@ export function AgentTextProse({ text, className = "" }: { text: string; classNa
         }
         if (b.type === "h3") {
           return (
-            <h4 key={`h3-${idx}`} className="text-[15px] font-semibold text-slate-900">
+            <h4
+              key={`h3-${idx}`}
+              className={`font-semibold text-slate-900 ${variant === "assistant" ? "text-base" : "text-[15px]"}`}
+            >
               {inlineBold(b.text)}
             </h4>
           );
         }
         if (b.type === "ul") {
           return (
-            <ul key={`ul-${idx}`} className="ml-1 space-y-2 border-l-2 border-teal-200/80 pl-3">
+            <ul key={`ul-${idx}`} className="ml-1 space-y-2.5 border-l-2 border-teal-200/80 pl-3">
               {b.items.map((item, j) => (
                 <li key={j} className="leading-relaxed">
                   {inlineBold(item)}

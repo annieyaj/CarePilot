@@ -13,7 +13,7 @@ function groceryFastMode() {
 }
 
 /**
- * @param {{ userMessage?: string, priceCheckItems?: string[], nutritionSummary?: string }} input
+ * @param {{ userMessage?: string, priceCheckItems?: string[], nutritionSummary?: string, nearbyStoreHints?: string[] }} input
  * @returns {string}
  */
 export function buildGroceryPriceTask(input) {
@@ -21,6 +21,18 @@ export function buildGroceryPriceTask(input) {
   const maxItems = fast ? MAX_ITEMS_FAST : MAX_ITEMS_FULL
   const userMessage = String(input.userMessage ?? '').slice(0, 500)
   const nutritionSummary = String(input.nutritionSummary ?? '').slice(0, 300)
+  const hintList = Array.isArray(input.nearbyStoreHints)
+    ? input.nearbyStoreHints.map((x) => String(x ?? '').trim()).filter(Boolean).slice(0, 10)
+    : []
+  const nearbyBlock = hintList.length
+    ? [
+        'Nearby stores (from Google Maps — prioritize these retailers when they have a public grocery website; include the chain name in results[].store):',
+        ...hintList.map((h, i) => `${i + 1}. ${h}`),
+        fast
+          ? 'Still collect Walmart and Vons prices for each product query when possible; add another chain from the list above if its site is easy to search.'
+          : 'Cover Walmart, Vons, and Ralphs as baseline; add rows for other chains from the list when relevant.',
+      ].join('\n')
+    : ''
   const rawItems = Array.isArray(input.priceCheckItems) ? input.priceCheckItems : []
   const items = rawItems
     .map((x) => String(x ?? '').trim())
@@ -48,6 +60,7 @@ export function buildGroceryPriceTask(input) {
       '',
       `User message: "${userMessage}"`,
       nutritionSummary ? `Nutrition focus: ${nutritionSummary}` : '',
+      nearbyBlock ? `\n${nearbyBlock}\n` : '',
       '',
       'Search queries:',
       itemsBlock,
@@ -75,6 +88,7 @@ export function buildGroceryPriceTask(input) {
     '',
     `User message: "${userMessage}"`,
     nutritionSummary ? `Nutrition focus: ${nutritionSummary}` : '',
+    nearbyBlock ? `\n${nearbyBlock}\n` : '',
     '',
     'For each search query, on each store: run search, open the first clearly relevant in-stock food item if possible, note product name, displayed price, product page URL, and the search-results URL.',
     '',
