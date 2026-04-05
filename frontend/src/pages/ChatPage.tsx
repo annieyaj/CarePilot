@@ -145,7 +145,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi—I'm your CarePilot nutrition assistant. Ask about food for sleep, focus, digestion, muscles and joints, or immune support. Say what's going on or rely on your saved health snapshot—both help tailor ideas. When you get a plan, use the panel on the right: check the steps you want, then tap Run selected. Summaries and follow-ups land here in the chat, and you can open quick links from any message whenever you like.";
+  "Hi—I'm CarePilot. Ask about food for sleep, focus, digestion, muscles and joints, or immunity—say how you feel or use your saved health snapshot. When there's a plan, check steps on the right and tap Run selected; answers come back here.";
 
 export default function ChatPage() {
   const location = useLocation();
