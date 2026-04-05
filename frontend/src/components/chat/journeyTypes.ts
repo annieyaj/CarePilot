@@ -16,6 +16,8 @@ export type BrowserSession = {
 export type CloudSessionView = {
   id: string;
   status: string;
+  /** Present when API normalizes v2 tasks — prefer over guessing from `status`. */
+  stillRunning?: boolean;
   liveUrl: string | null;
   lastStepSummary: string | null;
   stepCount: number;

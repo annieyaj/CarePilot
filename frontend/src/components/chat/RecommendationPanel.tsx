@@ -45,6 +45,7 @@ export function RecommendationPanel({
             onClick={() => onRunSelected()}
             disabled={runDisabled}
             loading={runLoading}
+            loadingLabel="Running…"
           >
             Run selected
           </SmartButton>

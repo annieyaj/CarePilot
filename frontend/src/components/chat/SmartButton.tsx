@@ -3,6 +3,8 @@ type SmartButtonProps = {
   variant?: "primary" | "ghost" | "outline";
   disabled?: boolean;
   loading?: boolean;
+  /** Shown next to the spinner when `loading` — easier to see than spinner alone. */
+  loadingLabel?: string;
   onClick?: () => void;
   className?: string;
   type?: "button" | "submit";
@@ -13,6 +15,7 @@ export function SmartButton({
   variant = "primary",
   disabled,
   loading,
+  loadingLabel,
   onClick,
   className = "",
   type = "button",
@@ -37,9 +40,13 @@ export function SmartButton({
       onClick={onClick}
     >
       {loading ? (
-        <span
-          className={`inline-block size-3.5 animate-spin rounded-full border-2 ${spinnerClass}`}
-        />
+        <>
+          <span
+            className={`inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 ${spinnerClass}`}
+            aria-hidden
+          />
+          {loadingLabel ? <span>{loadingLabel}</span> : null}
+        </>
       ) : (
         children
       )}
