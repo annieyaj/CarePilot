@@ -13,6 +13,8 @@
  * Optional:
  * - `BROWSER_USE_FLASH_MODE=false` — disable faster, less careful navigation (default: on for v2)
  * - `BROWSER_USE_LLM` — override the default fast model (default below if unset)
+ * - `BROWSER_USE_PROFILE_ID` — Browser Use profile UUID (cookies / Walmart login). See
+ *   https://docs.browser-use.com/cloud/guides/authentication
  *
  * Speed (defaults tuned for lower latency / cost per step):
  * - Default LLM is `browser-use-llm` (lighter than Browser Use 2.0). Set `BROWSER_USE_LLM` to override.
@@ -33,6 +35,11 @@ export function getBrowserUseApiKey() {
 
 export function cloudConfigured() {
   return Boolean(getBrowserUseApiKey())
+}
+
+/** Persistent profile UUID for tasks that need a logged-in retailer session. */
+export function getBrowserUseProfileId() {
+  return process.env.BROWSER_USE_PROFILE_ID?.trim() || ""
 }
 
 function headers() {
@@ -147,13 +154,35 @@ export function normalizeCloudTaskView(raw) {
 
 /**
  * @param {string} task - Natural-language browser task
- * @param {{ model?: string }} [opts]
+ * @param {{
+ *   model?: string,
+ *   profileId?: string,
+ *   sessionSettings?: Record<string, unknown>,
+ * }} [opts]
  */
 export async function createCloudSession(task, opts = {}) {
+  const profileId =
+    typeof opts.profileId === "string" && opts.profileId.trim()
+      ? opts.profileId.trim()
+      : getBrowserUseProfileId()
+
+  /** @type {Record<string, unknown>} */
+  const sessionSettings = {}
+  if (opts.sessionSettings && typeof opts.sessionSettings === "object") {
+    Object.assign(sessionSettings, opts.sessionSettings)
+  }
+  if (profileId) {
+    sessionSettings.profileId = profileId
+    if (sessionSettings.proxyCountryCode === undefined) {
+      sessionSettings.proxyCountryCode = "us"
+    }
+  }
+
   const body = {
     task,
     llm: resolveTaskLlm(opts),
     ...(envFlashModeDefaultOn() ? { flash_mode: true } : {}),
+    ...(Object.keys(sessionSettings).length > 0 ? { sessionSettings } : {}),
   }
   const res = await fetch(`${CLOUD_BASE}/tasks`, {
     method: 'POST',

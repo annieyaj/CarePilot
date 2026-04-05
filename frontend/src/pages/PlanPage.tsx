@@ -42,12 +42,6 @@ function normalizeMealSlot(raw: MealSlot | string): MealSlot {
   return { text, labels: legacyLabelsFromSentence(text) };
 }
 
-function buildShopRecipePrompt(mealTitle: string, labels: string[], recipeSummary: string): string {
-  const ingredients =
-    labels.length > 0 ? labels.join(", ") : recipeSummary.trim().slice(0, 280) || "general pantry items";
-  return `From my meal plan (${mealTitle}), I need to shop for these ingredients: ${ingredients}. Please give me a concise grocery list and any simple substitutions if something is unavailable.`;
-}
-
 function MealShopCard({
   mealTitle,
   slot,
@@ -61,8 +55,12 @@ function MealShopCard({
   const { text, labels } = normalizeMealSlot(slot);
 
   function goShopRecipe() {
-    navigate("/chat", {
-      state: { shopRecipeDraft: buildShopRecipePrompt(mealTitle, labels, text) },
+    const ingredients =
+      labels.length > 0 ? labels : legacyLabelsFromSentence(text);
+    const list =
+      ingredients.length > 0 ? ingredients : text.trim() ? [text.trim().slice(0, 120)] : [];
+    navigate("/shop-recipe", {
+      state: { shopRecipe: { mealTitle, ingredients: list } },
     });
   }
 
@@ -155,7 +153,7 @@ export default function PlanPage() {
         <h1 className="cp-page__title">Daily meal plan</h1>
         <p className="cp-page__sub">
           For {plan.date}. Uses your <strong>body metrics</strong> and <strong>subhealth ratings 1–5</strong> in
-          the planner. Hover a meal for <strong>Shop recipe</strong> to open chat with ingredients ready to send.
+          the planner. Hover a meal for <strong>Shop recipe</strong> to open the Walmart helper with ingredients filled in.
         </p>
       </header>
 

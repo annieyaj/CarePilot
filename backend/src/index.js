@@ -4,10 +4,12 @@ import express from "express";
 import {
   cloudConfigured,
   createCloudSession,
+  getBrowserUseProfileId,
   getCloudSession,
 } from "./browserUseCloud.js";
 import { buildCarePlacesTask } from "./careCloudTask.js";
 import { buildGroceryPriceTask } from "./groceryCloudTask.js";
+import { buildWalmartCartTask } from "./walmartCartTask.js";
 import {
   assistWithGemini,
   assistWithGeminiNutrition,
@@ -54,6 +56,7 @@ app.get("/api/health", (_req, res) => {
     service: "carepilot-backend",
     geminiConfigured: geminiConfigured(),
     browserUseConfigured: cloudConfigured(),
+    browserUseProfileConfigured: Boolean(getBrowserUseProfileId()),
     placesConfigured: placesConfigured(),
   });
 });
@@ -148,7 +151,10 @@ app.get("/api/me/meal-plan", (req, res) => {
 
 /** Whether Browser Use Cloud API key is set (never expose the key to the client). */
 app.get("/api/journey/cloud-status", (_req, res) => {
-  res.json({ configured: cloudConfigured() });
+  res.json({
+    configured: cloudConfigured(),
+    profileConfigured: Boolean(getBrowserUseProfileId()),
+  });
 });
 
 /** Whether Gemini API key is set (never expose the key to the client). */
@@ -232,11 +238,12 @@ app.post("/api/places/care-facilities", async (req, res) => {
 /**
  * Start a Browser Use Cloud **v2** agent task (POST …/api/v2/tasks). Poll GET …/cloud-task/:id.
  * Body: { task: string, model?: string } — maps to v2 `llm` — or —
- * { grocery: ... } | { care: { userMessage?, context? } } | { task: string }
+ * { grocery: ... } | { care: ... } | { walmartCart: { mealTitle?, items } } | { task: string }
  */
 app.post("/api/journey/cloud-task", async (req, res) => {
   const g = req.body?.grocery;
   const care = req.body?.care;
+  const w = req.body?.walmartCart;
   let task;
   if (g && typeof g === "object") {
     task = buildGroceryPriceTask({
@@ -255,12 +262,25 @@ app.post("/api/journey/cloud-task", async (req, res) => {
       userMessage: typeof care.userMessage === "string" ? care.userMessage : "",
       context: typeof care.context === "string" ? care.context : "",
     });
+  } else if (w && typeof w === "object") {
+    const items = Array.isArray(w.items) ? w.items : [];
+    if (items.length === 0) {
+      res.status(400).json({
+        error: "body.walmartCart.items (non-empty string array) required",
+      });
+      return;
+    }
+    task = buildWalmartCartTask({
+      mealTitle: typeof w.mealTitle === "string" ? w.mealTitle : "",
+      items,
+      useLoggedInProfile: Boolean(getBrowserUseProfileId()),
+    });
   } else if (typeof req.body?.task === "string" && req.body.task.trim()) {
     task = req.body.task.trim();
   } else {
     res.status(400).json({
       error:
-        "body.task (non-empty string) required, or body.grocery (prices), or body.care (hospitals / urgent care)",
+        "body.task (non-empty string) required, or body.grocery (prices), or body.care (hospitals), or body.walmartCart (Walmart cart helper)",
     });
     return;
   }
