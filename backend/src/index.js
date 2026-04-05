@@ -375,10 +375,14 @@ app.post("/api/journey/assist", async (req, res) => {
           return;
         } catch (e) {
           console.error("Gemini assist failed:", e?.message ?? e);
+          const timedOut = e && typeof e === "object" && e.name === "AbortError";
           res.status(503).json({
-            error: e?.message ?? "Gemini request failed",
-            detail:
-              "Fix the API key/model or try again; mock planner is not used when GEMINI_API_KEY is set.",
+            error: timedOut
+              ? "Request timed out"
+              : e?.message ?? "Gemini request failed",
+            detail: timedOut
+              ? "Try a shorter message or raise GEMINI_REQUEST_TIMEOUT_MS in backend/.env."
+              : "Fix the API key/model or try again; mock planner is not used when GEMINI_API_KEY is set.",
           });
           return;
         }
@@ -404,10 +408,14 @@ app.post("/api/journey/assist", async (req, res) => {
         return;
       } catch (e) {
         console.error("Gemini nutrition assist failed:", e?.message ?? e);
+        const timedOut = e && typeof e === "object" && e.name === "AbortError";
         res.status(503).json({
-          error: e?.message ?? "Gemini request failed",
-          detail:
-            "Fix the API key/model or try again; mock nutrition planner is not used when GEMINI_API_KEY is set.",
+          error: timedOut
+            ? "Request timed out"
+            : e?.message ?? "Gemini request failed",
+          detail: timedOut
+            ? "Try a shorter message or raise GEMINI_REQUEST_TIMEOUT_MS in backend/.env."
+            : "Fix the API key/model or try again; mock nutrition planner is not used when GEMINI_API_KEY is set.",
         });
         return;
       }

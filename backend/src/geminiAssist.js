@@ -8,6 +8,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { coerceMealPlanUpdate } from "./mealPlanFromChat.js";
+import { retryAsync, isRetryableGeminiError } from "./geminiRetry.js";
 import { retrieveRagContext } from "./rag/rag.js";
 import { buildUserContextBlock } from "./userContextBlock.js";
 
@@ -45,7 +46,7 @@ const assistResponseSchema = {
     assistantText: {
       type: Type.STRING,
       description:
-        "Main user-visible report: plain text only (no markdown #). Nutrition mode: follow the fixed layout in the system prompt (brief paragraphs, then Foods to emphasize: with - bullets, then Ease up on: comma-separated). Otherwise: direct answer, blank lines, short - bullets; align with browserSession.",
+        "Main user-visible report: plain text only (no markdown #). End with a What's next section (exact heading) and 1–2 follow-up lines starting with '- '. Nutrition mode: follow the fixed layout in the system prompt (Foods to emphasize / Ease up on or Ideas to try). Care mode: direct answer, blank lines, short - bullets; align with browserSession.",
     },
     browserSession: {
       type: Type.OBJECT,
@@ -274,6 +275,80 @@ function resolveGeminiTopP() {
   return GEMINI_TOP_P_DEFAULT;
 }
 
+/** Abort long-running generateContent calls (ms). 0 = no timeout. Default 120000. */
+function geminiRequestTimeoutMs() {
+  const raw = process.env.GEMINI_REQUEST_TIMEOUT_MS?.trim();
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 0 && n <= 600000) return Math.floor(n);
+  }
+  return 120_000;
+}
+
+/**
+ * Parse JSON from structured output; tolerate markdown fences or leading junk.
+ * Exported for unit tests.
+ * @param {string | undefined} raw
+ */
+export function parseModelJsonResponse(raw) {
+  let s = String(raw ?? "").trim();
+  if (!s) {
+    throw new Error("Empty response from Gemini");
+  }
+
+  const fence = /^```(?:json)?\s*\r?\n?([\s\S]*?)\r?\n?```\s*$/m;
+  const m = s.match(fence);
+  if (m) {
+    s = m[1].trim();
+  } else if (s.startsWith("```")) {
+    s = s.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/m, "").trim();
+  }
+
+  try {
+    return JSON.parse(s);
+  } catch {
+    const start = s.indexOf("{");
+    const end = s.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(s.slice(start, end + 1));
+      } catch {
+        /* fall through */
+      }
+    }
+    throw new Error("Gemini returned non-JSON text");
+  }
+}
+
+/**
+ * @param {import('@google/genai').GoogleGenAI} ai
+ * @param {{ model: string, contents: unknown, config: Record<string, unknown> }} request
+ */
+async function generateContentWithRetry(ai, request) {
+  const timeoutMs = geminiRequestTimeoutMs();
+  return retryAsync(
+    async () => {
+      const controller = new AbortController();
+      const timer =
+        timeoutMs > 0
+          ? setTimeout(() => controller.abort(), timeoutMs)
+          : null;
+      try {
+        return await ai.models.generateContent({
+          ...request,
+          config: {
+            ...request.config,
+            abortSignal: controller.signal,
+          },
+        });
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    },
+    { maxAttempts: 3, baseDelayMs: 500, isRetryable: isRetryableGeminiError },
+  );
+}
+
 /** Max prior turns to send (user+assistant pairs); keeps latency and cost reasonable. */
 const MAX_HISTORY_MESSAGES = 24;
 
@@ -395,7 +470,7 @@ export async function assistWithGemini(message, history, userContextSession = nu
 
   const contents = buildGeminiContents(message, history);
 
-  const response = await ai.models.generateContent({
+  const response = await generateContentWithRetry(ai, {
     model: modelId,
     contents,
     config: {
@@ -407,16 +482,7 @@ export async function assistWithGemini(message, history, userContextSession = nu
   });
 
   const text = response.text;
-  if (!text?.trim()) {
-    throw new Error("Empty response from Gemini");
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error("Gemini returned non-JSON text");
-  }
+  const parsed = parseModelJsonResponse(text);
 
   const base = normalizeAssistPayload(parsed);
   if (rag.sources?.length) return { ...base, ragSources: rag.sources };
@@ -466,7 +532,7 @@ export async function assistWithGeminiNutrition(message, history, userContextSes
 
   const contents = buildGeminiContents(message, history);
 
-  const response = await ai.models.generateContent({
+  const response = await generateContentWithRetry(ai, {
     model: modelId,
     contents,
     config: {
@@ -478,16 +544,7 @@ export async function assistWithGeminiNutrition(message, history, userContextSes
   });
 
   const text = response.text;
-  if (!text?.trim()) {
-    throw new Error("Empty response from Gemini");
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error("Gemini returned non-JSON text");
-  }
+  const parsed = parseModelJsonResponse(text);
 
   const base = normalizeAssistPayload(parsed);
   if (rag.sources?.length) return { ...base, ragSources: rag.sources };

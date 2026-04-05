@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeAssistPayload, buildGeminiContents } from "./geminiAssist.js";
+import {
+  normalizeAssistPayload,
+  buildGeminiContents,
+  parseModelJsonResponse,
+} from "./geminiAssist.js";
 
 test("normalizeAssistPayload fills defaults for minimal JSON", () => {
   const r = normalizeAssistPayload({
@@ -51,6 +55,21 @@ test("normalizeAssistPayload passes through priceCheckItems on browserSession", 
     },
   });
   assert.deepEqual(r.browserSession.priceCheckItems, ["olive oil", "frozen berries"]);
+});
+
+test("parseModelJsonResponse strips markdown fences", () => {
+  const raw = `\`\`\`json
+{"intent":"general","assistantText":"Hi","browserSession":{"id":"1","mode":"gemini","status":"preview","task":"t","steps":[],"actions":[]}}
+\`\`\``;
+  const p = parseModelJsonResponse(raw);
+  assert.equal(p.intent, "general");
+  assert.equal(p.assistantText, "Hi");
+});
+
+test("parseModelJsonResponse extracts object when extra prose prefix", () => {
+  const raw = `Here you go: {"intent":"general","assistantText":"Ok","browserSession":{"id":"x","mode":"gemini","status":"preview","task":"t","steps":[],"actions":[]}}`;
+  const p = parseModelJsonResponse(raw);
+  assert.equal(p.intent, "general");
 });
 
 test("normalizeAssistPayload repairs bad action URLs", () => {

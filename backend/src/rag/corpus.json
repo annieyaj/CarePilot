@@ -106,5 +106,11 @@
     "title": "Short follow-up messages",
     "tags": ["ok", "yes", "what next", "more"],
     "text": "Short user replies continue the same thread. Retrieve prior assistant context; do not reset to unrelated intake. Align browserSession steps and links with the ongoing topic."
+  },
+  {
+    "id": "crisis_988_mental_health",
+    "title": "Mental health crisis lines (US)",
+    "tags": ["988", "suicide", "crisis", "mental health", "hotline", "depression"],
+    "text": "In the United States, 988 connects to the Suicide & Crisis Lifeline (call or text). For immediate danger to self or others, call 911 or local emergency services. Encourage professional help and trusted contacts; do not minimize risk or delay urgent care."
   }
 ]
