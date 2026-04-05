@@ -8,6 +8,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { coerceMealPlanUpdate } from "./mealPlanFromChat.js";
+import { retryAsync, isRetryableGeminiError } from "./geminiRetry.js";
+import { retrieveRagContext } from "./rag/rag.js";
+import { buildUserContextBlock } from "./userContextBlock.js";
 
 const SYSTEM_INSTRUCTION = `You are CarePilot, a healthcare navigation assistant for the public web.
 
@@ -18,11 +21,13 @@ Core rules:
 - Use the full conversation. Short follow-ups ("?", "ok", "yes", "what next") continue the same topic—do not reset to generic intake questions. Answer the follow-up directly and keep browserSession aligned with that thread.
 
 Report style (assistantText — this is what the user reads):
+- Easy to scan: short lines, blank lines between sections, plain words. No dense walls of text.
 - Lead with a direct answer to their latest question in 1–3 short sentences. Warm and calm, not clinical jargon.
-- Then add structure: use blank lines between sections. Use short bullets (- item) for lists of options, steps, or reminders—not one dense paragraph.
+- Then add structure: short bullets (- item) for options, steps, or reminders. You may cover care navigation, insurance, fitness, sleep, stress, food patterns, or other wellness angles when they help—match what they asked; do not limit yourself to one domain if broader tips fit.
 - Be trustworthy: state limits honestly ("I can't examine you; if X happens, seek care"). Distinguish general education from personalized medical advice; when uncertain, say so briefly.
 - Avoid hype, fear-mongering, and absolute claims. Prefer "often", "may", "consider" over "will" or "always".
-- End with at most one line of standard context when helpful, e.g. that you help with finding care and resources, not replacing a clinician—without repeating long disclaimers every turn.
+- Every reply MUST end with a short block titled exactly: What's next — then 1–2 friendly follow-up questions (on their own lines, each starting with "- ") that deepen or widen the topic so the conversation keeps moving. Questions should be specific and easy to answer, not generic "anything else?"
+- Optionally one short line of context that you help with navigation and resources, not replacing a clinician—without long disclaimers every turn.
 - Do not use markdown headings (no #); plain text and newlines only. No emoji unless the user used them first.
 
 browserSession:
@@ -41,7 +46,7 @@ const assistResponseSchema = {
     assistantText: {
       type: Type.STRING,
       description:
-        "Main user-visible report: plain text only (no markdown #). Nutrition mode: follow the fixed layout in the system prompt (brief paragraphs, then Foods to emphasize: with - bullets, then Ease up on: comma-separated). Otherwise: direct answer, blank lines, short - bullets; align with browserSession.",
+        "Main user-visible report: plain text only (no markdown #). End with a What's next section (exact heading) and 1–2 follow-up lines starting with '- '. Nutrition mode: follow the fixed layout in the system prompt (Foods to emphasize / Ease up on or Ideas to try). Care mode: direct answer, blank lines, short - bullets; align with browserSession.",
     },
     browserSession: {
       type: Type.OBJECT,
@@ -160,30 +165,52 @@ const nutritionAssistResponseSchema = {
     intent: {
       type: Type.STRING,
       description:
-        "Topic label: sleep, cognitive, digestive, musculoskeletal, immune, general, or meta — best match for the user message AND conversation thread.",
+        "Topic label: sleep, cognitive, digestive, musculoskeletal, immune, fitness, general, or meta — best match for the user message AND conversation thread (use fitness for movement, exercise, stretching, walking routines).",
     },
     mealPlanUpdate: mealPlanUpdateSchema,
   },
 };
 
-const NUTRITION_SYSTEM_INSTRUCTION_BASE = `You are CarePilot's nutrition and subhealth assistant (food patterns, wellness habits, public nutrition resources). You are not a clinician: no diagnosis, no prescribing supplements or doses as medical treatment. Prefer NIH, USDA MyPlate, Harvard Nutrition Source, eatright.org, ADA, AHA, or similar authoritative pages.
+const NUTRITION_SYSTEM_INSTRUCTION_BASE = `You are CarePilot's wellness assistant: food and eating patterns, movement and fitness habits, sleep, stress, ergonomics, and trusted public health resources—not only meals. You are not a clinician: no diagnosis, no prescribing supplements or doses as medical treatment. For nutrition links prefer NIH, USDA MyPlate, Harvard Nutrition Source, eatright.org, ADA, AHA, or similar. For movement or general health, prefer CDC, HHS, hospital .edu rehab pages, or major medical societies.
 
-Conversation state: Read the full thread. Short user messages may rely on prior context ("what about dinner?", "my neck hurts"). Short follow-ups ("?", "ok", "yes") continue the SAME topic; do not reset to unrelated generic advice.
+Conversation state: Read the full thread. Short user messages may rely on prior context ("what about dinner?", "my neck hurts", "leg day ideas"). Short follow-ups ("?", "ok", "yes") continue the SAME topic; do not reset to unrelated generic advice.
 
-Report style (assistantText) — use this layout whenever you give food ideas (plain text only; no markdown #; emoji only if the user used them first):
+Readability: Keep assistantText easy to scan—short paragraphs, blank lines between sections, simple words, lines that are not too long. Prefer bullets over dense paragraphs.
+
+Follow-ups (required every turn): After your main content, add a section that starts on its own line with exactly: What's next
+Then put 1–2 lines, each starting with "- ", each line a concrete follow-up question that moves the topic forward (deeper detail, next step, or adjacent angle—e.g. schedule, barriers, preferences). Do not end a reply without this block.
+
+When the user mainly wants FOOD / meals / nutrition ideas, use this layout (plain text; no markdown #; emoji only if the user used them first):
 
 1) Brief answer: 1–3 short sentences (no line may start with "- " here). Blank line.
 
 2) On its own line, exactly: Foods to emphasize:
-   Then 5–12 lines, each starting with "- " and one concrete food or simple meal/snack (e.g. "- Oatmeal with banana and walnuts."). Blank line after the list.
+   Then 5–12 lines, each starting with "- " and one concrete food or simple meal/snack. Blank line after the list.
 
-3) On one line: Ease up on: followed by a short comma-separated list of patterns to lighten (not bullet lines), e.g. "Ease up on: large late dinners, sugary drinks, heavy fried foods."
+3) On one line: Ease up on: followed by a short comma-separated list of patterns, e.g. "Ease up on: large late dinners, sugary drinks."
 
-4) Optional: one short extra sentence for cautions or "when to see a clinician" if relevant.
+4) Optional: one short sentence for cautions or when to see a clinician if relevant.
 
-Be trustworthy: separate general nutrition education from personal medical advice; encourage an RD or clinician when symptoms, pregnancy, diabetes meds, eating disorders, or allergies are in play. Avoid fad framing and miracle claims.
+5) Blank line, then: What's next
+   - (your follow-up questions as "- " lines)
 
-browserSession coherence: task, every steps[].description, and actions must match the user's concern. Symptom + food context (e.g. neck pain: ergonomics, anti-inflammatory patterns, red flags) stays on-topic. Do not push shopping or price workflows unless they asked.
+When the user mainly wants NON-FOOD wellness (e.g. exercise, walking, stretching, sleep routine, desk ergonomics, stress breaks, hydration habits), do NOT force the Foods to emphasize / Ease up on blocks. Instead use:
+
+1) Brief answer: 1–3 short sentences. Blank line.
+
+2) On its own line: Ideas to try:
+   Then 4–10 lines starting with "- ", mixing concrete, doable suggestions (movement, timing, environment, habits). You may include one food-related bullet only if it naturally fits.
+
+3) Optional: one short caution or "see a clinician if" line when relevant.
+
+4) Blank line, then: What's next
+   - (your follow-up questions)
+
+When the thread mixes food and fitness, use short subsections with blank lines between them—you may use both "Ideas to try:" and "Foods to emphasize:" if both are genuinely useful, but keep total length reasonable.
+
+Be trustworthy: separate general education from personal medical advice; encourage an RD, PT, or clinician when symptoms, pregnancy, diabetes meds, eating disorders, sharp pain with exercise, or allergies are in play. Avoid fad framing and miracle claims.
+
+browserSession coherence: task, every steps[].description, and actions must match the user's concern (shopping, recipes, gyms, stretches, sleep hygiene, care sites—whatever fits). Neck pain: ergonomics + gentle movement + red flags can share a plan with food only if relevant. Do not push shopping or price workflows unless they asked.
 
 priceCheckItems: non-empty ONLY when the user clearly wants shopping, prices, groceries, stores, or food budget help. Otherwise return priceCheckItems: [].
 
@@ -246,6 +273,80 @@ function resolveGeminiTopP() {
     if (Number.isFinite(n) && n > 0 && n <= 1) return n;
   }
   return GEMINI_TOP_P_DEFAULT;
+}
+
+/** Abort long-running generateContent calls (ms). 0 = no timeout. Default 120000. */
+function geminiRequestTimeoutMs() {
+  const raw = process.env.GEMINI_REQUEST_TIMEOUT_MS?.trim();
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 0 && n <= 600000) return Math.floor(n);
+  }
+  return 120_000;
+}
+
+/**
+ * Parse JSON from structured output; tolerate markdown fences or leading junk.
+ * Exported for unit tests.
+ * @param {string | undefined} raw
+ */
+export function parseModelJsonResponse(raw) {
+  let s = String(raw ?? "").trim();
+  if (!s) {
+    throw new Error("Empty response from Gemini");
+  }
+
+  const fence = /^```(?:json)?\s*\r?\n?([\s\S]*?)\r?\n?```\s*$/m;
+  const m = s.match(fence);
+  if (m) {
+    s = m[1].trim();
+  } else if (s.startsWith("```")) {
+    s = s.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/m, "").trim();
+  }
+
+  try {
+    return JSON.parse(s);
+  } catch {
+    const start = s.indexOf("{");
+    const end = s.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(s.slice(start, end + 1));
+      } catch {
+        /* fall through */
+      }
+    }
+    throw new Error("Gemini returned non-JSON text");
+  }
+}
+
+/**
+ * @param {import('@google/genai').GoogleGenAI} ai
+ * @param {{ model: string, contents: unknown, config: Record<string, unknown> }} request
+ */
+async function generateContentWithRetry(ai, request) {
+  const timeoutMs = geminiRequestTimeoutMs();
+  return retryAsync(
+    async () => {
+      const controller = new AbortController();
+      const timer =
+        timeoutMs > 0
+          ? setTimeout(() => controller.abort(), timeoutMs)
+          : null;
+      try {
+        return await ai.models.generateContent({
+          ...request,
+          config: {
+            ...request.config,
+            abortSignal: controller.signal,
+          },
+        });
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    },
+    { maxAttempts: 3, baseDelayMs: 500, isRetryable: isRetryableGeminiError },
+  );
 }
 
 /** Max prior turns to send (user+assistant pairs); keeps latency and cost reasonable. */
@@ -349,9 +450,10 @@ export function normalizeAssistPayload(parsed) {
 /**
  * @param {string} message
  * @param {Array<{ role?: string, text?: string }>} [history] - Prior chat turns (user + assistant), oldest first
+ * @param {{ username?: string | null, profile?: object | null } | null} [userContextSession]
  * @returns {Promise<{ intent: string, assistantText: string, browserSession: object }>}
  */
-export async function assistWithGemini(message, history) {
+export async function assistWithGemini(message, history, userContextSession = null) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set");
@@ -360,13 +462,19 @@ export async function assistWithGemini(message, history) {
   const modelId = defaultModel();
   const ai = new GoogleGenAI({ apiKey });
 
+  const userCtx = buildUserContextBlock(userContextSession);
+  const userExtra = userCtx ? `\n\n${userCtx}` : "";
+
+  const rag = await retrieveRagContext(ai, message, history);
+  const ragExtra = rag.contextBlock ? `\n\n${rag.contextBlock}` : "";
+
   const contents = buildGeminiContents(message, history);
 
-  const response = await ai.models.generateContent({
+  const response = await generateContentWithRetry(ai, {
     model: modelId,
     contents,
     config: {
-      systemInstruction: `${SYSTEM_INSTRUCTION}\n\nConfigured Gemini model id: ${modelId}.`,
+      systemInstruction: `${SYSTEM_INSTRUCTION}${userExtra}${ragExtra}\n\nConfigured Gemini model id: ${modelId}.`,
       ...geminiSamplingConfig("care"),
       responseMimeType: "application/json",
       responseSchema: assistResponseSchema,
@@ -374,40 +482,11 @@ export async function assistWithGemini(message, history) {
   });
 
   const text = response.text;
-  if (!text?.trim()) {
-    throw new Error("Empty response from Gemini");
-  }
+  const parsed = parseModelJsonResponse(text);
 
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error("Gemini returned non-JSON text");
-  }
-
-  return normalizeAssistPayload(parsed);
-}
-
-/**
- * @param {object | null | undefined} profile - Session health profile (ratings, age, etc.)
- */
-function nutritionProfileHint(profile) {
-  if (!profile || typeof profile !== "object") return "";
-  const ratings = [
-    ["sleep", profile.sleepRating],
-    ["cognitive", profile.cognitiveRating],
-    ["digestive", profile.digestiveRating],
-    ["musculoskeletal", profile.musculoskeletalRating],
-    ["immune", profile.immuneRating],
-  ]
-    .filter(([, v]) => typeof v === "number" && v >= 1 && v <= 5)
-    .map(([k, v]) => `${k}: ${v}/5`);
-  const bits = [];
-  if (profile.age != null && Number.isFinite(profile.age))
-    bits.push(`age ${profile.age}`);
-  if (ratings.length) bits.push(`focus scores ${ratings.join(", ")}`);
-  if (!bits.length) return "";
-  return `\nUser context (optional): ${bits.join("; ")}.`;
+  const base = normalizeAssistPayload(parsed);
+  if (rag.sources?.length) return { ...base, ragSources: rag.sources };
+  return base;
 }
 
 /** Remind model to merge new replies with meal-plan state already saved from earlier chat turns. */
@@ -428,21 +507,32 @@ function nutritionExistingSyncHint(profile) {
  * Nutrition / subhealth chat via Gemini (same response shape as care assist).
  * @param {string} message
  * @param {Array<{ role?: string, text?: string }>} [history]
- * @param {object | null} [profile]
+ * @param {{ username?: string | null, profile?: object | null } | null} [userContextSession]
  */
-export async function assistWithGeminiNutrition(message, history, profile) {
+export async function assistWithGeminiNutrition(message, history, userContextSession = null) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set");
   }
 
-  const modelId = defaultModel();
-  const systemInstruction = `${NUTRITION_SYSTEM_INSTRUCTION_BASE}\n\nConfigured Gemini model id: ${modelId}.${nutritionProfileHint(profile)}${nutritionExistingSyncHint(profile)}`;
+  const profile =
+    userContextSession?.profile && typeof userContextSession.profile === "object"
+      ? userContextSession.profile
+      : null;
 
+  const modelId = defaultModel();
   const ai = new GoogleGenAI({ apiKey });
+  const userCtx = buildUserContextBlock(userContextSession);
+  const userExtra = userCtx ? `\n\n${userCtx}` : "";
+
+  const rag = await retrieveRagContext(ai, message, history);
+  const ragExtra = rag.contextBlock ? `\n\n${rag.contextBlock}` : "";
+
+  const systemInstruction = `${NUTRITION_SYSTEM_INSTRUCTION_BASE}${userExtra}${ragExtra}\n\nConfigured Gemini model id: ${modelId}.${nutritionExistingSyncHint(profile)}`;
+
   const contents = buildGeminiContents(message, history);
 
-  const response = await ai.models.generateContent({
+  const response = await generateContentWithRetry(ai, {
     model: modelId,
     contents,
     config: {
@@ -454,16 +544,9 @@ export async function assistWithGeminiNutrition(message, history, profile) {
   });
 
   const text = response.text;
-  if (!text?.trim()) {
-    throw new Error("Empty response from Gemini");
-  }
+  const parsed = parseModelJsonResponse(text);
 
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error("Gemini returned non-JSON text");
-  }
-
-  return normalizeAssistPayload(parsed);
+  const base = normalizeAssistPayload(parsed);
+  if (rag.sources?.length) return { ...base, ragSources: rag.sources };
+  return base;
 }

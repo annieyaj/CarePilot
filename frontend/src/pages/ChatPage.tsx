@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/session";
 import { useSession } from "../context/SessionContext";
 import { ChatWindow } from "../components/chat/ChatWindow";
+import { computeJourneyPhase } from "../components/chat/journeyPhase";
 import { CloudRunStatus } from "../components/chat/CloudRunStatus";
 import { cloudStatusStillRunning } from "../components/chat/cloudStatus";
 import type {
@@ -13,6 +14,7 @@ import { buildRecommendationActions } from "../components/chat/recommendationAct
 import { titleForResourceLinks } from "../components/chat/resourceLinks";
 import { RecommendationPanel } from "../components/chat/RecommendationPanel";
 import { browserRunPayloadFromOutput } from "../components/chat/cloudTaskFormat";
+import type { RagSource } from "../components/chat/JourneyFlowStrip";
 import type { ChatMessage, RecommendationAction } from "../components/chat/types";
 import { assistantMessageFromApi, assistantMessageFromBrowserRun } from "../components/chat/types";
 import { readNearbyGroceryStoreNames } from "../maps/nearbyStoreHintsStorage";
@@ -141,7 +143,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi, I'm CarePilot.\nShare your symptoms, and I'll recommend foods + build a simple meal plan you can follow.";
+  "Hi! I'm your CarePilot wellness assistant.\n\nAsk about food, movement, sleep, stress, or habits—I'll keep replies short and easy to scan, and I'll usually suggest a couple of follow-up questions so we can go deeper.\n\nWhen you have a plan in the side panel, check the steps you want and tap “Run selected” so Browser Use Cloud can run in a real browser (add BROWSER_USE_API_KEY on the server). Your profile and meal plan stay in sync when you're signed in.";
 
 export default function ChatPage() {
   const { refreshMe, sessionId } = useSession();
@@ -167,6 +169,7 @@ export default function ChatPage() {
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [journeyIntent, setJourneyIntent] = useState<string | null>(null);
+  const [ragSources, setRagSources] = useState<RagSource[] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -336,6 +339,7 @@ export default function ChatPage() {
     if (!text) return;
     setDraft("");
     setJourneyIntent(null);
+    setRagSources(null);
     lastPatientMessageRef.current = text;
 
     const history = messages
@@ -391,6 +395,7 @@ export default function ChatPage() {
       setCheckedIds(new Set());
     } catch (e) {
       setJourneyIntent(null);
+      setRagSources(null);
       const msg = e instanceof Error ? e.message : "Request failed";
       setLiveError(msg);
       const errText = `Could not reach the planner (${msg}). Is the API running on port 3001?`;
@@ -404,6 +409,8 @@ export default function ChatPage() {
       setLiveLoading(false);
     }
   }
+
+  const journeyPhase = computeJourneyPhase(live, cloudActive, cloudSession);
 
   const browserUseRunning = cloudActive || cloudSession != null;
   const browserUseReady =
@@ -492,6 +499,8 @@ export default function ChatPage() {
             : undefined
         }
         cloudActive={cloudActive}
+        journeyPhase={journeyPhase}
+        ragSources={ragSources}
       />
       <RecommendationPanel
         minimal={browserPanelMinimal}

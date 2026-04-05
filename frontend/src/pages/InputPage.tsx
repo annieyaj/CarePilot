@@ -64,6 +64,10 @@ export default function InputPage() {
   const [digestiveRating, setDigestiveRating] = useState(DEFAULT_RATING);
   const [musculoskeletalRating, setMusculoskeletalRating] = useState(DEFAULT_RATING);
   const [immuneRating, setImmuneRating] = useState(DEFAULT_RATING);
+  const [displayName, setDisplayName] = useState("");
+  const [healthFocus, setHealthFocus] = useState("");
+  const [conditionsSummary, setConditionsSummary] = useState("");
+  const [visitLabSummary, setVisitLabSummary] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -177,6 +181,10 @@ export default function InputPage() {
         immuneRating,
         symptomTagIds: p?.symptomTagIds ?? [],
         completedOnboarding: true,
+        displayName: displayName.trim() || null,
+        healthFocus: healthFocus.trim() || null,
+        conditionsSummary: conditionsSummary.trim() || null,
+        visitLabSummary: visitLabSummary.trim() || null,
       };
       const r = await apiFetch("/api/me/profile", {
         method: "PUT",
@@ -323,6 +331,63 @@ export default function InputPage() {
             <strong>{bmiPreview != null ? bmiPreview : "—"}</strong>
             {bmiPreview != null ? " (also sent to the server from height & weight)" : ""}
           </p>
+        </fieldset>
+
+        <fieldset className="cp-form__fieldset" aria-labelledby="input-section-chat-context">
+          <h2 className="cp-form__section-title" id="input-section-chat-context">
+            Chat personalization
+          </h2>
+          <p className="cp-form__hint">
+            Optional. Short summaries only—CarePilot uses this to tailor tone and priorities in chat. Not a
+            medical record; never paste full charts or passwords.
+          </p>
+          <div className="cp-form__row">
+            <label className="cp-form__label">
+              Preferred name
+              <input
+                className="cp-form__input"
+                type="text"
+                autoComplete="nickname"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. Alex"
+                maxLength={80}
+              />
+            </label>
+          </div>
+          <label className="cp-form__label">
+            Wellness goals
+            <textarea
+              className="cp-form__textarea"
+              rows={2}
+              value={healthFocus}
+              onChange={(e) => setHealthFocus(e.target.value)}
+              placeholder="e.g. Steadier energy for workdays; more vegetables"
+              maxLength={500}
+            />
+          </label>
+          <label className="cp-form__label">
+            Conditions / concerns (your words)
+            <textarea
+              className="cp-form__textarea"
+              rows={2}
+              value={conditionsSummary}
+              onChange={(e) => setConditionsSummary(e.target.value)}
+              placeholder="e.g. Mild GERD—doctor aware"
+              maxLength={500}
+            />
+          </label>
+          <label className="cp-form__label">
+            Recent visits / labs (short summary)
+            <textarea
+              className="cp-form__textarea"
+              rows={3}
+              value={visitLabSummary}
+              onChange={(e) => setVisitLabSummary(e.target.value)}
+              placeholder="e.g. Last A1c in range per PCP (Jan). Cholesterol recheck in fall."
+              maxLength={1200}
+            />
+          </label>
         </fieldset>
 
         <fieldset className="cp-form__fieldset" aria-labelledby="input-section-subhealth">

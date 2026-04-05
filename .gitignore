@@ -17,6 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# RAG embedding cache (regenerated from corpus + model)
+backend/src/rag/embeddings-cache.json
+
 # Local editor history backups
 .history/
 

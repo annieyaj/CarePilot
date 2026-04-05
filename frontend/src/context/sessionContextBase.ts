@@ -15,6 +15,8 @@ export type ChatMealPlanContext = {
 };
 
 export type HealthProfile = {
+  /** Preferred first name or display (optional; falls back to login username in prompts). */
+  displayName?: string | null;
   age: number | null;
   heightCm: number | null;
   weightKg: number | null;
@@ -27,6 +29,12 @@ export type HealthProfile = {
   completedOnboarding: boolean;
   /** Quick-check multi-select symptom chip ids */
   symptomTagIds?: string[];
+  /** Wellness goals in the user's words */
+  healthFocus?: string | null;
+  /** Conditions / concerns in the user's words */
+  conditionsSummary?: string | null;
+  /** Short visit / lab summary (user-entered; not verified) */
+  visitLabSummary?: string | null;
   chatMealPlanContext?: ChatMealPlanContext | null;
 };
 

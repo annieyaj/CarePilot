@@ -125,6 +125,10 @@ function buildProfileBody(
     digestiveRating: p?.digestiveRating ?? 3,
     symptomTagIds,
     completedOnboarding: true,
+    displayName: p?.displayName ?? null,
+    healthFocus: p?.healthFocus ?? null,
+    conditionsSummary: p?.conditionsSummary ?? null,
+    visitLabSummary: p?.visitLabSummary ?? null,
   };
 }
 

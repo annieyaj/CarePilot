@@ -259,34 +259,6 @@
   color: var(--cp-accent);
 }
 
-.cp-sidebar__gemini {
-  margin: 0.75rem 0 0;
-  padding: 0.5rem 0.65rem 0;
-  border-top: 1px solid rgba(var(--cp-ink-rgb), 0.07);
-  font-size: 0.68rem;
-  line-height: 1.35;
-  color: var(--cp-text-placeholder);
-}
-
-.cp-sidebar__gemini-kicker {
-  display: block;
-  margin-bottom: 0.2rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--cp-text-muted);
-}
-
-.cp-sidebar__gemini-link {
-  color: var(--cp-accent-deep);
-  font-weight: 650;
-  text-decoration: none;
-}
-
-.cp-sidebar__gemini-link:hover {
-  text-decoration: underline;
-}
-
 .cp-sidebar__foot {
   margin-top: auto;
   padding-top: 1.15rem;
@@ -2547,14 +2519,6 @@
     margin-bottom: 0;
   }
 
-  .cp-sidebar__gemini {
-    flex-basis: 100%;
-    margin: 0.15rem 0 0;
-    padding: 0.45rem 0 0;
-    border-top: 1px solid rgba(var(--cp-ink-rgb), 0.08);
-    text-align: center;
-  }
-
   .cp-sidebar__foot {
     width: 100%;
     margin-top: 0;
@@ -3607,6 +3571,165 @@
 
 .cp-quick__symptom-skip-link:hover {
   color: var(--cp-accent-hover);
+}
+
+/* Chat journey: Ask → Plan → Run → Results + RAG source chips */
+.cp-journey-flow {
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(15, 60, 40, 0.1);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(237, 245, 240, 0.55) 100%
+  );
+  padding: 0.65rem 1rem 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .cp-journey-flow {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+.cp-journey-flow__steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.35rem 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cp-journey-flow__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1 1 42%;
+  padding: 0.35rem 0.45rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(100, 116, 139, 0.15);
+  background: rgba(255, 255, 255, 0.55);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+@media (min-width: 640px) {
+  .cp-journey-flow__step {
+    flex: 1 1 0;
+    min-width: 5rem;
+  }
+}
+
+.cp-journey-flow__step--active {
+  border-color: rgba(20, 83, 45, 0.35);
+  box-shadow: 0 0 0 1px rgba(20, 83, 45, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.cp-journey-flow__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: var(--cp-sage-900, #14532d);
+  background: rgba(20, 83, 45, 0.1);
+}
+
+.cp-journey-flow__step--active .cp-journey-flow__num {
+  background: rgba(20, 83, 45, 0.2);
+}
+
+.cp-journey-flow__text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.cp-journey-flow__label {
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cp-sage-900, #14532d);
+}
+
+.cp-journey-flow__hint {
+  font-size: 0.65rem;
+  line-height: 1.25;
+  color: var(--cp-text-muted, #64748b);
+}
+
+.cp-journey-flow__status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  color: var(--cp-sage-900, #14532d);
+}
+
+.cp-journey-flow__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--cp-dust-600, #3d4f3a);
+  animation: cp-journey-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes cp-journey-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.cp-journey-flow__rag {
+  margin-top: 0.55rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed rgba(100, 116, 139, 0.22);
+}
+
+.cp-journey-flow__rag-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cp-text-muted, #64748b);
+  margin-bottom: 0.25rem;
+}
+
+.cp-journey-flow__rag-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.cp-journey-flow__rag-list li {
+  font-size: 0.65rem;
+  line-height: 1.2;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--cp-text-secondary, #475569);
+  max-width: 100%;
 }
 
 /* Browser plan overview (Gemini structured plan chip + status badge) */

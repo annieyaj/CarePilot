@@ -1,5 +1,10 @@
 import type { RefObject } from "react";
 import { Logo } from "../Logo";
+import {
+  JourneyFlowStrip,
+  type JourneyPhase,
+  type RagSource,
+} from "./JourneyFlowStrip";
 import { MessageCard } from "./MessageCard";
 import type { ChatMessage } from "./types";
 import { SmartButton } from "./SmartButton";
@@ -16,6 +21,8 @@ type ChatWindowProps = {
   liveExists: boolean;
   onCheckGroceryPrices?: () => void;
   cloudActive: boolean;
+  journeyPhase: JourneyPhase;
+  ragSources?: RagSource[] | null;
 };
 
 export function ChatWindow({
@@ -30,6 +37,8 @@ export function ChatWindow({
   liveExists,
   onCheckGroceryPrices,
   cloudActive,
+  journeyPhase,
+  ragSources,
 }: ChatWindowProps) {
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const lastAssistantId = lastAssistant?.role === "assistant" ? lastAssistant.id : null;
@@ -47,24 +56,11 @@ export function ChatWindow({
         </h1>
       </header>
 
-      {liveLoading ? (
-        <div
-          className="cp-chat-planning-strip shrink-0 border-b border-cp-sage-900/10 bg-cp-sage-50/85 px-4 py-2 text-xs text-cp-sage-900 sm:px-6"
-          role="status"
-          aria-live="polite"
-        >
-          <span className="inline-flex items-center gap-2">
-            <span
-              className="size-2 shrink-0 animate-pulse rounded-full bg-cp-dust-600"
-              aria-hidden
-            />
-            <span className="font-medium">Google Gemini is drafting your plan…</span>
-          </span>
-          <span className="mt-0.5 block text-[11px] text-cp-sage-800/85 sm:mt-0 sm:ml-4 sm:inline">
-            Live actions will update when the structured steps are ready.
-          </span>
-        </div>
-      ) : null}
+      <JourneyFlowStrip
+        phase={journeyPhase}
+        liveLoading={liveLoading}
+        ragSources={ragSources}
+      />
 
       <div
         ref={listRef}
